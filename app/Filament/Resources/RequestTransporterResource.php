@@ -24,6 +24,8 @@ use Filament\Tables\Actions\Action;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Illuminate\Support\Facades\Auth;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\ListRecords\Tab;
 
 /**
  * Recurso para la gestión de Asignaciones de Transportistas
@@ -154,12 +156,19 @@ class RequestTransporterResource extends Resource
     {
         return $table
             ->columns([
-                // Información básica de la solicitud
                 TextColumn::make('materialRequest.id')
-                    ->sortable()
-                    ->searchable()
-                    ->label('Solicitud #'),
-
+                    ->label('ID')
+                    ->sortable(),
+                TextColumn::make('materialRequest.current_status')
+                    ->label('Estado')
+                    ->badge()
+                    ->colors([
+                        'warning' => MaterialRequest::STATUS_PENDING,
+                        'primary' => MaterialRequest::STATUS_ACCEPTED,
+                        'danger' => MaterialRequest::STATUS_RESCHEDULED,
+                        'success' => MaterialRequest::STATUS_COMPLETED,
+                        'danger' => MaterialRequest::STATUS_FAILED,
+                    ]),
                 TextColumn::make('materialRequest.material_description')
                     ->limit(30)
                     ->searchable()
@@ -184,18 +193,6 @@ class RequestTransporterResource extends Resource
                         "Teléfono: {$record->materialRequest->delivery_phone}\n" .
                         "Dirección: {$record->materialRequest->delivery_address}"
                     ),
-
-                // Estado de la solicitud
-                BadgeColumn::make('materialRequest.current_status')
-                    ->colors([
-                        'warning' => 'pending',
-                        'primary' => 'accepted',
-                        'info' => 'rescheduled',
-                        'success' => 'completed',
-                        'danger' => 'failed'
-                    ])
-                    ->label('Estado')
-                    ->searchable(),
 
                 // Fechas importantes
                 TextColumn::make('assignment_date')
@@ -271,9 +268,15 @@ class RequestTransporterResource extends Resource
                     ->icon('heroicon-o-check')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn ($record) => $record->materialRequest->current_status === MaterialRequest::STATUS_PENDING)
+                    ->visible(fn ($record) => 
+                        $record->materialRequest->current_status === MaterialRequest::STATUS_PENDING ||
+                        $record->materialRequest->current_status === MaterialRequest::STATUS_RESCHEDULED
+                    )
                     ->action(function ($record) {
-                        $record->materialRequest->update(['current_status' => MaterialRequest::STATUS_ACCEPTED]);
+                        $record->materialRequest->update([
+                            'current_status' => MaterialRequest::STATUS_ACCEPTED,
+                            'current_transporter_id' => Auth::user()->id
+                        ]);
                         $record->update([
                             'assignment_status' => RequestTransporter::STATUS_ACCEPTED,
                             'assignment_date' => now(),
@@ -297,26 +300,22 @@ class RequestTransporterResource extends Resource
                 Action::make('reschedule')
                     ->label('Reprogramar')
                     ->icon('heroicon-o-calendar')
-                    ->color('warning')
-                    ->form([
-                        DateTimePicker::make('new_date')
-                            ->label('Nueva Fecha')
-                            ->required()
-                            ->helperText('Seleccione la nueva fecha y hora para el servicio'),
-                        Textarea::make('comments')
-                            ->label('Comentarios')
-                            ->required()
-                            ->placeholder('Explique el motivo de la reprogramación'),
-                    ])
-                    ->visible(fn ($record) => $record->materialRequest->current_status === MaterialRequest::STATUS_PENDING)
-                    ->action(function ($record, array $data) {
-                        $record->materialRequest->update(['current_status' => MaterialRequest::STATUS_RESCHEDULED]);
-                        $record->update([
-                            'assignment_status' => RequestTransporter::STATUS_REJECTED,
-                            'response_date' => now(),
-                            'comments' => $data['comments']
-                        ]);
-                    }),
+                    ->requiresConfirmation()
+                    ->modalHeading('Reprogramar Solicitud')
+                    ->modalDescription('¿Está seguro de que desea reprogramar esta solicitud? La solicitud volverá a estado pendiente.')
+                    ->action(function ($record) {
+                        // Obtenemos la solicitud de material
+                        $materialRequest = $record->materialRequest;
+                        $materialRequest->reschedule();
+                        Notification::make()
+                            ->title('Solicitud reprogramada')
+                            ->success()
+                            ->send();
+                    })
+                    ->visible(fn ($record) => 
+                        $record->transporter_id === Auth::user()->id && 
+                        $record->materialRequest->current_status === MaterialRequest::STATUS_ACCEPTED
+                    ),
             ])
             ->defaultSort('assignment_date', 'desc');
     }
@@ -352,13 +351,10 @@ class RequestTransporterResource extends Resource
      */
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->whereHas('materialRequest', function ($query) {
-                $query->whereIn('current_status', [
-                    MaterialRequest::STATUS_PENDING,
-                    MaterialRequest::STATUS_ACCEPTED
-                ]);
-            });
+        $query = parent::getEloquentQuery();
+        
+        // Asegurarnos de que siempre cargamos la relación materialRequest
+        return $query->with('materialRequest');
     }
 
     /**

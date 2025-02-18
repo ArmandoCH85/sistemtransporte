@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Str;
+use App\Models\MaterialRequest;
 
 /**
  * Recurso para la gestión de Categorías de Materiales
@@ -131,5 +132,20 @@ class MaterialCategoryResource extends Resource
             'create' => Pages\CreateMaterialCategory::route('/create'),    // Página de creación
             'edit' => Pages\EditMaterialCategory::route('/{record}/edit'), // Página de edición
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery();
+    }
+
+    public function delete(): void
+    {
+        // Verificar si hay solicitudes que usan esta categoría
+        if (MaterialRequest::where('material_category_id', $this->id)->exists()) {
+            throw new \Exception('No se puede eliminar esta categoría porque hay solicitudes que la están usando.');
+        }
+
+        parent::delete();
     }
 }

@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
+use App\Notifications\MaterialRequestStatusNotification;
 
 class MaterialRequest extends Model
 {
@@ -71,6 +73,13 @@ class MaterialRequest extends Model
             // Si no es una transición de estado, verificar si se pueden editar otros campos
             if ($originalStatus !== self::STATUS_PENDING) {
                 throw new \Exception('No se puede editar una solicitud que ya fue enviada al transportista.');
+            }
+        });
+
+        static::updated(function ($request) {
+            // Si el estado cambió, notificar al solicitante
+            if ($request->isDirty('current_status')) {
+                $request->requester->notify(new MaterialRequestStatusNotification($request));
             }
         });
     }
@@ -142,5 +151,26 @@ class MaterialRequest extends Model
     public function canDelete(): bool
     {
         return $this->current_status === self::STATUS_PENDING;
+    }
+
+    public function reschedule(): void
+    {
+        // Obtener el transportista actual antes de la actualización
+        $currentTransporter = $this->currentTransporter;
+
+        // Actualiza el estado a reprogramado
+        $this->update([
+            'current_status' => self::STATUS_RESCHEDULED,
+            'current_transporter_id' => null,
+            'rescheduled_date' => now(),
+        ]);
+
+        // Si existe un transportista actual, actualizamos su estado
+        if ($currentTransporter) {
+            $currentTransporter->update([
+                'assignment_status' => 'rescheduled',
+                'response_date' => now()
+            ]);
+        }
     }
 }

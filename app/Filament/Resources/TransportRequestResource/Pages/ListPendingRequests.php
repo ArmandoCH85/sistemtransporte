@@ -24,8 +24,16 @@ class ListPendingRequests extends ListRecords
         return [
             'pendientes' => Tab::make('Pendientes')
                 ->icon('heroicon-o-clock')
-                ->badge(MaterialRequestTransport::where('current_status', MaterialRequestTransport::STATUS_PENDING)->count())
-                ->query(fn (Builder $query) => $query->where('current_status', MaterialRequestTransport::STATUS_PENDING)),
+                ->badge(
+                    MaterialRequestTransport::whereIn('current_status', [
+                        MaterialRequestTransport::STATUS_PENDING,
+                        MaterialRequestTransport::STATUS_RESCHEDULED
+                    ])->count()
+                )
+                ->query(fn (Builder $query) => $query->whereIn('current_status', [
+                    MaterialRequestTransport::STATUS_PENDING,
+                    MaterialRequestTransport::STATUS_RESCHEDULED
+                ])),
 
             'en_proceso' => Tab::make('En Proceso')
                 ->icon('heroicon-o-truck')

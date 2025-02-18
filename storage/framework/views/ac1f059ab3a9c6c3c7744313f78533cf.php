@@ -40,7 +40,7 @@ unset($__defined_vars); ?>
     $icon = ($alias ? \Filament\Support\Facades\FilamentIcon::resolve($alias) : null) ?: ($icon ?? $slot);
 ?>
 
-<?php if($icon instanceof \Illuminate\Contracts\Support\Htmlable): ?>
+<!--[if BLOCK]><![endif]--><?php if($icon instanceof \Illuminate\Contracts\Support\Htmlable): ?>
     <span <?php echo e($attributes->class($class)); ?>>
         <?php echo e($icon); ?>
 
@@ -56,5 +56,5 @@ unset($__defined_vars); ?>
     <?php echo e(svg($icon,
         $class,
         array_filter($attributes->getAttributes()),)); ?>
-<?php endif; ?>
+<?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 <?php /**PATH C:\Users\arman\Herd\gestion_transporte\vendor\filament\support\src\/../resources/views/components/icon.blade.php ENDPATH**/ ?>

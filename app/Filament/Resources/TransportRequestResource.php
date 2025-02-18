@@ -77,14 +77,35 @@ class TransportRequestResource extends Resource
                             ->label('Solicitante')
                             ->helperText('Usuario que realiza la solicitud'),
 
-                        // Área de origen
+                        // Área de origen - Solución revisada
                         Select::make('origin_area_id')
-                            ->relationship('originArea', 'name')
+                            ->relationship(
+                                'originArea',
+                                'name',
+                                fn ($query) => $query->active()
+                            )
                             ->required()
                             ->searchable()
                             ->preload()
                             ->label('Área de Origen')
-                            ->helperText('Área desde donde se recogerá el material'),
+                            ->helperText('Área desde donde se recogerá el material')
+                            ->live()
+                            ->afterStateUpdated(function ($state) {
+                                if (!is_numeric($state)) {
+                                    $state = null;
+                                }
+                            })
+                            ->exists('areas', 'id')
+                            ->numeric()
+                            ->validationAttribute('área de origen')
+                            ->rules(['integer', 'exists:areas,id'])
+                            ->dehydrateStateUsing(fn ($state) => is_numeric($state) ? (int)$state : null)
+                            ->reactive()
+                            ->selectablePlaceholder(false) // Evita que el placeholder sea seleccionable
+                            ->native(false) // Usa el select personalizado de Filament
+                            ->evaluateSearchUsing(fn (string $search) => [
+                                'name' => ['like', "%{$search}%"],
+                            ]),
 
                         // Tipo de material
                         Select::make('material_category_id')
@@ -220,25 +241,28 @@ class TransportRequestResource extends Resource
             ->modifyQueryUsing(function (Builder $query) {
                 if (! request()->routeIs('*.transport-requests.index')) {
                     $query->where(function ($query) {
-                        $query->where('current_status', MaterialRequestTransport::STATUS_PENDING)
-                            ->orWhere(function ($query) {
-                                $query->where('current_status', MaterialRequestTransport::STATUS_ACCEPTED)
-                                    ->whereHas('currentTransporter', function ($query) {
-                                        $query->where('transporter_id', Auth::id());
-                                    });
-                            })
-                            ->orWhere(function ($query) {
-                                $query->where('current_status', MaterialRequestTransport::STATUS_COMPLETED)
-                                    ->whereHas('currentTransporter', function ($query) {
-                                        $query->where('transporter_id', Auth::id());
-                                    });
-                            })
-                            ->orWhere(function ($query) {
-                                $query->where('current_status', MaterialRequestTransport::STATUS_FAILED)
-                                    ->whereHas('currentTransporter', function ($query) {
-                                        $query->where('transporter_id', Auth::id());
-                                    });
-                            });
+                        $query->whereIn('current_status', [
+                            MaterialRequestTransport::STATUS_PENDING,
+                            MaterialRequestTransport::STATUS_RESCHEDULED
+                        ])
+                        ->orWhere(function ($query) {
+                            $query->where('current_status', MaterialRequestTransport::STATUS_ACCEPTED)
+                                ->whereHas('currentTransporter', function ($query) {
+                                    $query->where('transporter_id', Auth::id());
+                                });
+                        })
+                        ->orWhere(function ($query) {
+                            $query->where('current_status', MaterialRequestTransport::STATUS_COMPLETED)
+                                ->whereHas('currentTransporter', function ($query) {
+                                    $query->where('transporter_id', Auth::id());
+                                });
+                        })
+                        ->orWhere(function ($query) {
+                            $query->where('current_status', MaterialRequestTransport::STATUS_FAILED)
+                                ->whereHas('currentTransporter', function ($query) {
+                                    $query->where('transporter_id', Auth::id());
+                                });
+                        });
                     });
                 }
                 return $query;
@@ -270,7 +294,10 @@ class TransportRequestResource extends Resource
                     ->icon('heroicon-o-check')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn ($record) => $record->current_status === MaterialRequestTransport::STATUS_PENDING)
+                    ->visible(fn ($record) =>
+                        $record->current_status === MaterialRequestTransport::STATUS_PENDING ||
+                        $record->current_status === MaterialRequestTransport::STATUS_RESCHEDULED
+                    )
                     ->action(function (MaterialRequestTransport $record) {
                         // 1. Crear la asignación del transportista
                         $record->transporters()->create([
@@ -291,9 +318,42 @@ class TransportRequestResource extends Resource
                         if ($usuario) {
                             $details = [
                                 'title' => 'Solicitud de Material Aceptada',
-                                'content' => "Su solicitud ha sido aceptada por el transportista {$transportistaNombre}. Pronto se pondrá en contacto con usted.",
+                                'content' => '
+                                <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">✅ Solicitud #'.$record->id.' Aceptada</h2>
+
+                                    <p style="color: #4a5568; margin-bottom: 20px;">
+                                        Su solicitud ha sido aceptada y será atendida por un transportista.
+                                    </p>
+
+                                    <div style="background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">🚚 Datos del Transportista</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Nombre:</strong> '.Auth::user()->name.'<br>
+                                            </p>
+                                        </div>
+
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles de la Solicitud</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Material:</strong> '.$record->material_description.'<br>
+                                                <strong>Origen:</strong> '.$record->pickup_address.'<br>
+                                                <strong>Destino:</strong> '.$record->delivery_address.'
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <p style="color: #718096; font-size: 0.9em; text-align: center; margin-top: 20px;">
+                                        Este es un correo automático, por favor no responder directamente.
+                                    </p>
+                                </div>
+                                ',
                             ];
-                            Mail::to($usuario->email)->send(new TestMail($details));
+                            Mail::send('emails.test', ['data' => $details], function($message) use ($usuario, $details, $record) {
+                                $message->to($usuario->email)
+                                        ->subject("Solicitud #{$record->id} - Aceptada");
+                            });
                         }
 
                         // 5. Enviar correo a todos los super_admin
@@ -301,9 +361,39 @@ class TransportRequestResource extends Resource
                         foreach ($superAdmins as $admin) {
                             $details = [
                                 'title' => 'Solicitud de Material Asignada',
-                                'content' => "La solicitud #{$record->id} ha sido aceptada por el transportista {$transportistaNombre}.",
+                                'content' => '
+                                <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #'.$record->id.' Asignada</h2>
+
+                                    <div style="background-color: white; padding: 20px; border-radius: 8px;">
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">🚚 Asignación</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
+                                                <strong>Fecha de Asignación:</strong> '.now()->format('d/m/Y H:i').'
+                                            </p>
+                                        </div>
+
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Material:</strong> '.$record->material_description.'<br>
+                                                <strong>Origen:</strong> '.$record->pickup_address.'<br>
+                                                <strong>Destino:</strong> '.$record->delivery_address.'
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <p style="color: #718096; font-size: 0.9em; text-align: center; margin-top: 20px;">
+                                        Este es un correo automático, por favor no responder directamente.
+                                    </p>
+                                </div>
+                                ',
                             ];
-                            Mail::to($admin->email)->send(new TestMail($details));
+                            Mail::send('emails.test', ['data' => $details], function($message) use ($admin, $details, $record) {
+                                $message->to($admin->email)
+                                        ->subject("Solicitud #{$record->id} - Asignada a Transportista");
+                            });
                         }
                     }),
 
@@ -319,7 +409,11 @@ class TransportRequestResource extends Resource
                             ->label('Comentarios')
                             ->required(),
                     ])
-                    ->visible(fn ($record) => $record->current_status === MaterialRequestTransport::STATUS_PENDING)
+                    ->visible(fn ($record) =>
+                        $record->current_status === MaterialRequestTransport::STATUS_PENDING ||
+                        ($record->current_status === MaterialRequestTransport::STATUS_ACCEPTED &&
+                         $record->currentTransporter?->transporter_id === Auth::id())
+                    )
                     ->action(function (MaterialRequestTransport $record, array $data) {
                         // 1. Actualizar el estado y datos de la solicitud
                         $record->update([
@@ -345,14 +439,46 @@ class TransportRequestResource extends Resource
                         // Obtenemos el usuario a través de la relación requester
                         $usuario = $record->requester;
                         if ($usuario) {
-                            Log::info('Enviando correo al usuario: ' . $usuario->email); // Log para debug
                             $details = [
                                 'title' => 'Solicitud de Material Reprogramada',
-                                'content' => "Su solicitud ha sido reprogramada por el transportista {$transportistaNombre} para la fecha {$nuevaFecha}.\n\nMotivo: {$data['comments']}",
+                                'content' => '
+                                <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">🗓️ Solicitud #'.$record->id.' Reprogramada</h2>
+
+                                    <p style="color: #4a5568; margin-bottom: 20px;">
+                                        Su solicitud ha sido reprogramada por el siguiente motivo:
+                                    </p>
+
+                                    <div style="background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">⏰ Nueva Programación</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Nueva Fecha:</strong> '.\Carbon\Carbon::parse($data['new_date'])->format('d/m/Y H:i').'<br>
+                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
+                                                <strong>Motivo:</strong> '.$data['comments'].'
+                                            </p>
+                                        </div>
+
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles de la Solicitud</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Material:</strong> '.$record->material_description.'<br>
+                                                <strong>Origen:</strong> '.$record->pickup_address.'<br>
+                                                <strong>Destino:</strong> '.$record->delivery_address.'
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <p style="color: #718096; font-size: 0.9em; text-align: center; margin-top: 20px;">
+                                        Este es un correo automático, por favor no responder directamente.
+                                    </p>
+                                </div>
+                                ',
                             ];
-                            Mail::to($usuario->email)->send(new TestMail($details));
-                        } else {
-                            Log::error('No se encontró el usuario para la solicitud: ' . $record->id); // Log para debug
+                            Mail::send('emails.test', ['data' => $details], function($message) use ($usuario, $details, $record) {
+                                $message->to($usuario->email)
+                                        ->subject("Solicitud #{$record->id} - Reprogramada");
+                            });
                         }
 
                         // 5. Enviar correo a todos los super_admin
@@ -360,9 +486,31 @@ class TransportRequestResource extends Resource
                         foreach ($superAdmins as $admin) {
                             $details = [
                                 'title' => 'Solicitud de Material Reprogramada',
-                                'content' => "La solicitud #{$record->id} ha sido reprogramada por el transportista {$transportistaNombre} para la fecha {$nuevaFecha}.\n\nMotivo: {$data['comments']}",
+                                'content' => '
+                                <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #'.$record->id.' Reprogramada</h2>
+
+                                    <div style="background-color: white; padding: 20px; border-radius: 8px;">
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">🗓️ Detalles de Reprogramación</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
+                                                <strong>Nueva Fecha:</strong> '.\Carbon\Carbon::parse($data['new_date'])->format('d/m/Y H:i').'<br>
+                                                <strong>Motivo:</strong> '.$data['comments'].'
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <p style="color: #718096; font-size: 0.9em; text-align: center; margin-top: 20px;">
+                                        Este es un correo automático, por favor no responder directamente.
+                                    </p>
+                                </div>
+                                ',
                             ];
-                            Mail::to($admin->email)->send(new TestMail($details));
+                            Mail::send('emails.test', ['data' => $details], function($message) use ($admin, $details, $record) {
+                                $message->to($admin->email)
+                                        ->subject("Solicitud #{$record->id} - Reprogramada");
+                            });
                         }
                     }),
 
@@ -376,31 +524,82 @@ class TransportRequestResource extends Resource
                         $record->currentTransporter?->transporter_id === Auth::id()
                     )
                     ->action(function (MaterialRequestTransport $record) {
-                        // 1. Actualizar el estado de la solicitud
                         $record->update(['current_status' => MaterialRequestTransport::STATUS_COMPLETED]);
 
-                        // 2. Obtener el nombre del transportista que completó el servicio
-                        $transportistaNombre = Auth::user()->name;
-
-                        // 3. Enviar correo al usuario que creó la solicitud
+                        // Enviar correo al usuario
                         $usuario = $record->requester;
                         if ($usuario) {
-                            Log::info('Enviando correo de finalización al usuario: ' . $usuario->email);
                             $details = [
                                 'title' => 'Solicitud de Material Completada',
-                                'content' => "Su solicitud ha sido completada exitosamente por el transportista {$transportistaNombre}. El servicio de transporte ha finalizado.",
+                                'content' => '
+                                <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">✅ Solicitud #'.$record->id.' Completada</h2>
+
+                                    <p style="color: #4a5568; margin-bottom: 20px;">
+                                        Su solicitud ha sido completada exitosamente.
+                                    </p>
+
+                                    <div style="background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">🚚 Datos del Servicio</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
+                                                <strong>Fecha de Finalización:</strong> '.now()->format('d/m/Y H:i').'
+                                            </p>
+                                        </div>
+
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles del Envío</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Material:</strong> '.$record->material_description.'<br>
+                                                <strong>Origen:</strong> '.$record->pickup_address.'<br>
+                                                <strong>Destino:</strong> '.$record->delivery_address.'
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <p style="color: #718096; font-size: 0.9em; text-align: center; margin-top: 20px;">
+                                        Este es un correo automático, por favor no responder directamente.
+                                    </p>
+                                </div>
+                                ',
                             ];
-                            Mail::to($usuario->email)->send(new TestMail($details));
+                            Mail::send('emails.test', ['data' => $details], function($message) use ($usuario, $details, $record) {
+                                $message->to($usuario->email)
+                                        ->subject("Solicitud #{$record->id} - Completada");
+                            });
                         }
 
-                        // 4. Enviar correo a todos los super_admin
+                        // Enviar correo a los super_admin
                         $superAdmins = User::role('super_admin')->get();
                         foreach ($superAdmins as $admin) {
                             $details = [
                                 'title' => 'Solicitud de Material Finalizada',
-                                'content' => "La solicitud #{$record->id} ha sido completada exitosamente por el transportista {$transportistaNombre}.",
+                                'content' => '
+                                <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #'.$record->id.' Completada</h2>
+
+                                    <div style="background-color: white; padding: 20px; border-radius: 8px;">
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">✅ Detalles de Finalización</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
+                                                <strong>Fecha de Finalización:</strong> '.now()->format('d/m/Y H:i').'<br>
+                                                <strong>Estado:</strong> Completado
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <p style="color: #718096; font-size: 0.9em; text-align: center; margin-top: 20px;">
+                                        Este es un correo automático, por favor no responder directamente.
+                                    </p>
+                                </div>
+                                ',
                             ];
-                            Mail::to($admin->email)->send(new TestMail($details));
+                            Mail::send('emails.test', ['data' => $details], function($message) use ($admin, $details, $record) {
+                                $message->to($admin->email)
+                                        ->subject("Solicitud #{$record->id} - Completada");
+                            });
                         }
                     }),
 
@@ -431,34 +630,86 @@ class TransportRequestResource extends Resource
                         $record->currentTransporter?->transporter_id === Auth::id()
                     )
                     ->action(function ($record, array $data) {
-                        // 1. Actualizar el estado y datos de la solicitud
                         $record->update([
                             'current_status' => MaterialRequestTransport::STATUS_FAILED,
                             'evidence_image' => $data['evidence_image'],
                             'comments' => $data['failure_reason']
                         ]);
 
-                        // 2. Obtener el nombre del transportista
-                        $transportistaNombre = Auth::user()->name;
-
-                        // 3. Enviar correo al usuario que creó la solicitud
+                        // Enviar correo al usuario
                         $usuario = $record->requester;
                         if ($usuario) {
                             $details = [
                                 'title' => 'Solicitud de Material No Realizada',
-                                'content' => "Su solicitud no pudo ser realizada por el transportista {$transportistaNombre}.\n\nMotivo: {$data['failure_reason']}",
+                                'content' => '
+                                <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">❌ Solicitud #'.$record->id.' No Realizada</h2>
+
+                                    <p style="color: #4a5568; margin-bottom: 20px;">
+                                        Lamentamos informarle que su solicitud no pudo ser realizada.
+                                    </p>
+
+                                    <div style="background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">⚠️ Motivo</h3>
+                                            <p style="margin-left: 20px; color: #4a5568; background-color: #fff5f5; padding: 10px; border-radius: 5px;">
+                                                '.$data['failure_reason'].'
+                                            </p>
+                                        </div>
+
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles de la Solicitud</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
+                                                <strong>Material:</strong> '.$record->material_description.'<br>
+                                                <strong>Origen:</strong> '.$record->pickup_address.'<br>
+                                                <strong>Destino:</strong> '.$record->delivery_address.'
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <p style="color: #718096; font-size: 0.9em; text-align: center; margin-top: 20px;">
+                                        Este es un correo automático, por favor no responder directamente.
+                                    </p>
+                                </div>
+                                ',
                             ];
-                            Mail::to($usuario->email)->send(new TestMail($details));
+                            Mail::send('emails.test', ['data' => $details], function($message) use ($usuario, $details, $record) {
+                                $message->to($usuario->email)
+                                        ->subject("Solicitud #{$record->id} - No Realizada");
+                            });
                         }
 
-                        // 4. Enviar correo a todos los super_admin
+                        // Enviar correo a los super_admin
                         $superAdmins = User::role('super_admin')->get();
                         foreach ($superAdmins as $admin) {
                             $details = [
                                 'title' => 'Solicitud de Material No Realizada',
-                                'content' => "La solicitud #{$record->id} no pudo ser realizada por el transportista {$transportistaNombre}.\n\nMotivo: {$data['failure_reason']}",
+                                'content' => '
+                                <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #'.$record->id.' No Realizada</h2>
+
+                                    <div style="background-color: white; padding: 20px; border-radius: 8px;">
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">❌ Detalles del Fallo</h3>
+                                            <p style="margin-left: 20px; color: #4a5568;">
+                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
+                                                <strong>Fecha:</strong> '.now()->format('d/m/Y H:i').'<br>
+                                                <strong>Motivo:</strong> '.$data['failure_reason'].'
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <p style="color: #718096; font-size: 0.9em; text-align: center; margin-top: 20px;">
+                                        Este es un correo automático, por favor no responder directamente.
+                                    </p>
+                                </div>
+                                ',
                             ];
-                            Mail::to($admin->email)->send(new TestMail($details));
+                            Mail::send('emails.test', ['data' => $details], function($message) use ($admin, $details, $record) {
+                                $message->to($admin->email)
+                                        ->subject("Solicitud #{$record->id} - No Realizada");
+                            });
                         }
                     }),
             ])
@@ -502,10 +753,22 @@ class TransportRequestResource extends Resource
 
         return parent::getEloquentQuery()
             ->where(function ($query) {
-                $query->where('current_status', MaterialRequestTransport::STATUS_PENDING)
-                    ->orWhereHas('currentTransporter', function ($query) {
-                        $query->where('transporter_id', Auth::id());
+                $query->where(function ($q) {
+                    // Mostrar todas las solicitudes pendientes y reprogramadas
+                    $q->whereIn('current_status', [
+                        MaterialRequestTransport::STATUS_PENDING,
+                        MaterialRequestTransport::STATUS_RESCHEDULED
+                    ]);
+                })->orWhere(function ($q) {
+                    // Mostrar solo las solicitudes asignadas al transportista actual
+                    $q->whereIn('current_status', [
+                        MaterialRequestTransport::STATUS_ACCEPTED,
+                        MaterialRequestTransport::STATUS_COMPLETED,
+                        MaterialRequestTransport::STATUS_FAILED
+                    ])->whereHas('currentTransporter', function ($q) {
+                        $q->where('transporter_id', Auth::id());
                     });
+                });
             });
     }
 }

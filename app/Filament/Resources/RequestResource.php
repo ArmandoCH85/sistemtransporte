@@ -123,7 +123,7 @@ class RequestResource extends Resource
                             ->tel()
                             ->maxLength(255)
                             ->label('Teléfono de Recogida')
-                            ->placeholder('+34 XXX XXX XXX')
+                            ->placeholder('+51 XXX XXX XXX')
                             ->helperText('Número de contacto en el punto de recogida'),
                     ])->columns(3),
 
@@ -151,7 +151,7 @@ class RequestResource extends Resource
                             ->tel()
                             ->maxLength(255)
                             ->label('Teléfono de Entrega')
-                            ->placeholder('+34 XXX XXX XXX')
+                            ->placeholder('+51 XXX XXX XXX')
                             ->helperText('Número de contacto en el punto de entrega'),
                     ])->columns(3),
 

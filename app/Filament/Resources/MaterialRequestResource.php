@@ -66,17 +66,13 @@ class MaterialRequestResource extends Resource
                                     ->required()
                                     ->label('Categoría de Material'),
 
-                                // Campo de selección de área de origen
-                                Select::make('origin_area_id')
-                                    ->relationship(
-                                        'originArea',
-                                        'name',
-                                        fn($query) => $query->where('is_active', true)
-                                    )
-                                    ->preload()
-                                    ->searchable()
+                                // Campo de texto para el área de origen
+                                TextInput::make('origin_area_id')
                                     ->required()
-                                    ->label('Área de Origen'),
+                                    ->label('Área de Origen')
+                                    ->placeholder('Ingrese el área de origen')
+                                    ->maxLength(255)
+                                    ->helperText('Ingrese el nombre del área desde donde se recogerá el material.'),
                             ]),
 
                         // Campos de descripción y comentarios
@@ -118,7 +114,7 @@ class MaterialRequestResource extends Resource
                             ->tel()
                             ->maxLength(20)
                             ->label('Teléfono')
-                            ->placeholder('+34 XXX XXX XXX')
+                            ->placeholder('+51 XXX XXX XXX')
                             ->telRegex('/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\.\/0-9]*$/'),
                     ])->columns(3),
 
@@ -146,7 +142,7 @@ class MaterialRequestResource extends Resource
                             ->tel()
                             ->maxLength(20)
                             ->label('Teléfono')
-                            ->placeholder('+34 XXX XXX XXX')
+                            ->placeholder('+51 XXX XXX XXX')
                             ->telRegex('/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\.\/0-9]*$/'),
                     ])->columns(3),
             ])->statePath('data');
