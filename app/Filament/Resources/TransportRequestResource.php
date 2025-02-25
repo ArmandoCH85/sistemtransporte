@@ -411,8 +411,8 @@ class TransportRequestResource extends Resource
                     ])
                     ->visible(fn ($record) =>
                         $record->current_status === MaterialRequestTransport::STATUS_PENDING ||
-                        ($record->current_status === MaterialRequestTransport::STATUS_ACCEPTED &&
-                         $record->currentTransporter?->transporter_id === Auth::id())
+                        $record->current_status === MaterialRequestTransport::STATUS_RESCHEDULED &&
+                         $record->currentTransporter?->transporter_id === Auth::id()
                     )
                     ->action(function (MaterialRequestTransport $record, array $data) {
                         // 1. Actualizar el estado y datos de la solicitud
