@@ -21,13 +21,26 @@ class MaterialRequest extends Model
     const STATUS_COMPLETED = 'completed';
     const STATUS_FAILED = 'failed';
 
+    // Después de las constantes de estado
+    public const LOCATIONS = [
+        'surco' => 'Surco',
+        'san_isidro' => 'San Isidro',
+        'san_borja_hospitalaria' => 'San Borja Hospitalaria',
+        'lima_ambulatoria' => 'Lima Ambulatoria',
+        'lima_hospitalaria' => 'Lima Hospitalaria',
+        'la_molina' => 'La Molina',
+    ];
+
     protected $fillable = [
         'requester_id', 'material_category_id', 'origin_area_id',
         'material_description', 'comments', 'fields_completed',
         'pickup_address', 'pickup_contact', 'pickup_phone',
         'delivery_address', 'delivery_contact', 'delivery_phone',
         'current_status', 'evidence_image', 'rescheduled_date',
-        'reschedule_comments'
+        'reschedule_comments',
+        'package_image',
+        'pickup_location',
+        'delivery_location',
     ];
 
     protected static function boot()
@@ -172,5 +185,11 @@ class MaterialRequest extends Model
                 'response_date' => now()
             ]);
         }
+    }
+
+    // Método helper para obtener las ubicaciones
+    public static function getLocations(): array
+    {
+        return self::LOCATIONS;
     }
 }

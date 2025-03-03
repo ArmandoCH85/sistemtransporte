@@ -10,6 +10,7 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -18,6 +19,9 @@ use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Permission\Models\Role;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Notifications\Notification;
 
 class MaterialRequestResource extends Resource
 {
@@ -78,24 +82,39 @@ class MaterialRequestResource extends Resource
                         // Campos de descripción y comentarios
                         Textarea::make('material_description')
                             ->required()
-                            ->maxLength(255)
+                            ->maxLength(1000)
                             ->label('Descripción del Material')
+                            ->placeholder('Describa detalladamente el material a transportar')
+                            ->helperText('Incluya características importantes como peso, dimensiones, etc.')
                             ->rows(3)
                             ->columnSpanFull(),
 
                         Textarea::make('comments')
-                            ->maxLength(255)
+                            ->maxLength(1000)
                             ->label('Comentarios')
+                            ->placeholder('Especificar número de cajas, bultos, refrigerados, sobres, tamaño, otros')
+                            ->helperText('Detalle la cantidad y tipo de items a transportar')
                             ->rows(2)
                             ->columnSpanFull(),
                     ]),
 
                 // Sección de información de recogida
                 Section::make('Información de Recogida')
-                    ->description('Detalles del punto de recogida del material')
-                    ->icon('heroicon-o-truck')
+                    ->description('Detalles del punto de recogida')
                     ->schema([
-                        // Campos de dirección y contacto de recogida
+                        Select::make('pickup_location')
+                            ->options([
+                                'surco' => 'Surco',
+                                'san_isidro' => 'San Isidro',
+                                'san_borja_hospitalaria' => 'San Borja Hospitalaria',
+                                'lima_ambulatoria' => 'Lima Ambulatoria',
+                                'lima_hospitalaria' => 'Lima Hospitalaria',
+                                'la_molina' => 'La Molina',
+                            ])
+                            ->required()
+                            ->label('Ubicación')
+                            ->placeholder('Seleccione la ubicación'),
+
                         Textarea::make('pickup_address')
                             ->required()
                             ->maxLength(1000)
@@ -116,14 +135,25 @@ class MaterialRequestResource extends Resource
                             ->label('Teléfono')
                             ->placeholder('+51 XXX XXX XXX')
                             ->telRegex('/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\.\/0-9]*$/'),
-                    ])->columns(3),
+                    ])->columns(2),
 
                 // Sección de información de entrega
                 Section::make('Información de Entrega')
-                    ->description('Detalles del punto de entrega del material')
-                    ->icon('heroicon-o-map')
+                    ->description('Detalles del punto de entrega')
                     ->schema([
-                        // Campos de dirección y contacto de entrega
+                        Select::make('delivery_location')
+                            ->options([
+                                'surco' => 'Surco',
+                                'san_isidro' => 'San Isidro',
+                                'san_borja_hospitalaria' => 'San Borja Hospitalaria',
+                                'lima_ambulatoria' => 'Lima Ambulatoria',
+                                'lima_hospitalaria' => 'Lima Hospitalaria',
+                                'la_molina' => 'La Molina',
+                            ])
+                            ->required()
+                            ->label('Ubicación')
+                            ->placeholder('Seleccione la ubicación'),
+
                         Textarea::make('delivery_address')
                             ->required()
                             ->maxLength(1000)
@@ -144,7 +174,20 @@ class MaterialRequestResource extends Resource
                             ->label('Teléfono')
                             ->placeholder('+51 XXX XXX XXX')
                             ->telRegex('/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\.\/0-9]*$/'),
-                    ])->columns(3),
+                    ])->columns(2),
+
+                Section::make('Evidencia Fotográfica')
+                    ->description('Foto de las cajas o items a transportar')
+                    ->schema([
+                        FileUpload::make('package_image')
+                            ->image()
+                            ->disk('public')
+                            ->directory('package-images')
+                            ->maxSize(5120)
+                            ->label('Foto de las cajas')
+                            ->helperText('Si envías una o más cajas debes adjuntar una foto')
+                            ->columnSpanFull(),
+                    ]),
             ])->statePath('data');
     }
 
@@ -194,41 +237,40 @@ class MaterialRequestResource extends Resource
                     ->sortable()
                     ->label('Fecha'),
             ])
+            ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->label('Ver Detalle')
+                    ->icon('heroicon-o-eye')
+                    ->color('info'),
+
+                Tables\Actions\DeleteAction::make()
+                    ->label('Eliminar')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->visible(fn (MaterialRequest $record): bool => 
+                        $record->current_status === MaterialRequest::STATUS_PENDING &&
+                        $record->requester_id === Auth::id()
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading('Eliminar solicitud')
+                    ->modalDescription('¿Está seguro que desea eliminar esta solicitud? Esta acción no se puede deshacer.')
+                    ->modalSubmitActionLabel('Sí, eliminar')
+                    ->modalCancelActionLabel('No, cancelar')
+                    ->after(fn () => Notification::make()->success()->title('Solicitud eliminada')->send()),
+
+                Tables\Actions\EditAction::make()
+                    ->visible(fn (MaterialRequest $record): bool => 
+                        $record->current_status === MaterialRequest::STATUS_PENDING &&
+                        $record->requester_id === Auth::id()
+                    ),
+            ])
             ->defaultSort('created_at', 'desc')
             ->filters([
                 // Aquí se pueden agregar filtros para la tabla
             ])
-            ->actions([
-                // Acciones disponibles para cada registro
-                Tables\Actions\Action::make('view')
-                    ->label('Ver Detalle')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->modalContent(function (MaterialRequest $record) {
-                        $record->load([
-                            'requester',
-                            'materialCategory',
-                            'originArea',
-                            'currentTransporter.transporter',
-                            'transporters' => function ($query) {
-                                $query->latest('created_at');
-                            }
-                        ]);
-                        return view('transport-requests.detail-modal', [
-                            'request' => $record
-                        ]);
-                    })
-                    ->modalWidth('5xl')
-                    ->modalHeading('Detalle de Solicitud'),
-                Tables\Actions\EditAction::make()
-                    ->visible(function (MaterialRequest $record): bool {
-                        // Solo permitir editar si está pendiente
-                        return $record->current_status === MaterialRequest::STATUS_PENDING;
-                    }),
-            ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make()
-                    ->visible(fn () => auth()->user()->hasRole('super_admin')),
+                    ->visible(fn () => Auth::check() && Auth::user()->roles->pluck('name')->contains('super_admin')),
             ]);
     }
 
@@ -255,8 +297,7 @@ class MaterialRequestResource extends Resource
     {
         $query = parent::getEloquentQuery()->latest();
 
-        // Si el usuario NO es super_admin, solo ve sus propias solicitudes
-        if (!auth()->user()->hasRole('super_admin')) {
+        if (!Auth::check() || !Auth::user()->roles->pluck('name')->contains('super_admin')) {
             $query->where('requester_id', Auth::id());
         }
 
@@ -271,7 +312,10 @@ class MaterialRequestResource extends Resource
 
     public static function canDelete(Model $record): bool
     {
-        // Solo super_admin puede eliminar registros
-        return auth()->user()->hasRole('super_admin');
+        // Permitir eliminar si:
+        // 1. El usuario es el creador de la solicitud Y está pendiente
+        // 2. O si es super_admin
+        return ($record->requester_id === Auth::id() && $record->current_status === MaterialRequest::STATUS_PENDING) ||
+               (Auth::check() && Auth::user()->roles->pluck('name')->contains('super_admin'));
     }
 }

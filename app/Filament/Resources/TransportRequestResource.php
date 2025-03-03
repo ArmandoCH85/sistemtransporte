@@ -28,6 +28,8 @@ use App\Models\RequestTransporter;
 use App\Models\User;
 use App\Mail\TestMail;
 use Illuminate\Support\Facades\Mail;
+use Filament\Tables\Actions\DeleteAction;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Recurso para la gestión de Solicitudes de Transporte
@@ -77,7 +79,7 @@ class TransportRequestResource extends Resource
                             ->label('Solicitante')
                             ->helperText('Usuario que realiza la solicitud'),
 
-                        // Área de origen - Solución revisada
+                        // Cambiamos Área de Origen por Área Solicitante
                         Select::make('origin_area_id')
                             ->relationship(
                                 'originArea',
@@ -87,25 +89,8 @@ class TransportRequestResource extends Resource
                             ->required()
                             ->searchable()
                             ->preload()
-                            ->label('Área de Origen')
-                            ->helperText('Área desde donde se recogerá el material')
-                            ->live()
-                            ->afterStateUpdated(function ($state) {
-                                if (!is_numeric($state)) {
-                                    $state = null;
-                                }
-                            })
-                            ->exists('areas', 'id')
-                            ->numeric()
-                            ->validationAttribute('área de origen')
-                            ->rules(['integer', 'exists:areas,id'])
-                            ->dehydrateStateUsing(fn ($state) => is_numeric($state) ? (int)$state : null)
-                            ->reactive()
-                            ->selectablePlaceholder(false) // Evita que el placeholder sea seleccionable
-                            ->native(false) // Usa el select personalizado de Filament
-                            ->evaluateSearchUsing(fn (string $search) => [
-                                'name' => ['like', "%{$search}%"],
-                            ]),
+                            ->label('Área Solicitante')
+                            ->helperText('Indique el área a la que pertenece la persona que solicita'),
 
                         // Tipo de material
                         Select::make('material_category_id')
@@ -134,8 +119,8 @@ class TransportRequestResource extends Resource
                         Textarea::make('comments')
                             ->maxLength(1000)
                             ->label('Comentarios')
-                            ->placeholder('Información adicional relevante')
-                            ->helperText('Cualquier detalle adicional que deba ser considerado')
+                            ->placeholder('Especificar número de cajas, bultos, refrigerados, sobres, tamaño, otros')
+                            ->helperText('Detalle la cantidad y tipo de items a transportar')
                             ->rows(2)
                             ->columnSpanFull(),
                     ]),
@@ -144,6 +129,19 @@ class TransportRequestResource extends Resource
                     ->description('Detalles del punto de recogida')
                     ->schema([
                         // Dirección de recogida
+                        Select::make('pickup_location')
+                            ->options([
+                                'surco' => 'Surco',
+                                'san_isidro' => 'San Isidro',
+                                'san_borja_hospitalaria' => 'San Borja Hospitalaria',
+                                'lima_ambulatoria' => 'Lima Ambulatoria',
+                                'lima_hospitalaria' => 'Lima Hospitalaria',
+                                'la_molina' => 'La Molina',
+                            ])
+                            ->required()
+                            ->label('Ubicación')
+                            ->placeholder('Seleccione la ubicación'),
+
                         Forms\Components\Textarea::make('pickup_address')
                             ->required()
                             ->maxLength(1000)
@@ -167,12 +165,25 @@ class TransportRequestResource extends Resource
                             ->placeholder('+51 XXX XXX XXX')
                             ->helperText('Número de teléfono del contacto en el punto de recogida')
                             ->regex('/^\+?[0-9]{1,4}[-. ]?[0-9]{6,14}$/'),
-                    ])->columns(3),
+                    ])->columns(2),
 
                 Section::make('Información de Entrega')
                     ->description('Detalles del punto de entrega')
                     ->schema([
                         // Dirección de entrega
+                        Select::make('delivery_location')
+                            ->options([
+                                'surco' => 'Surco',
+                                'san_isidro' => 'San Isidro',
+                                'san_borja_hospitalaria' => 'San Borja Hospitalaria',
+                                'lima_ambulatoria' => 'Lima Ambulatoria',
+                                'lima_hospitalaria' => 'Lima Hospitalaria',
+                                'la_molina' => 'La Molina',
+                            ])
+                            ->required()
+                            ->label('Ubicación')
+                            ->placeholder('Seleccione la ubicación'),
+
                         Forms\Components\Textarea::make('delivery_address')
                             ->required()
                             ->maxLength(1000)
@@ -196,7 +207,20 @@ class TransportRequestResource extends Resource
                             ->placeholder('+51 XXX XXX XXX')
                             ->helperText('Número de teléfono del contacto en el punto de entrega')
                             ->regex('/^\+?[0-9]{1,4}[-. ]?[0-9]{6,14}$/'),
-                    ])->columns(3),
+                    ])->columns(2),
+
+                Section::make('Evidencia Fotográfica')
+                    ->description('Foto de las cajas o items a transportar')
+                    ->schema([
+                        FileUpload::make('package_image')
+                            ->image()
+                            ->disk('public')
+                            ->directory('package-images')
+                            ->maxSize(5120)
+                            ->label('Foto de las cajas')
+                            ->helperText('Si envías una o más cajas debes adjuntar una foto')
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 
@@ -338,8 +362,8 @@ class TransportRequestResource extends Resource
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles de la Solicitud</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
                                                 <strong>Material:</strong> '.$record->material_description.'<br>
-                                                <strong>Origen:</strong> '.$record->pickup_address.'<br>
-                                                <strong>Destino:</strong> '.$record->delivery_address.'
+                                                <strong>Origen:</strong> '.MaterialRequestTransport::LOCATIONS[$record->pickup_location].' - '.$record->pickup_address.'<br>
+                                                <strong>Destino:</strong> '.MaterialRequestTransport::LOCATIONS[$record->delivery_location].' - '.$record->delivery_address.'
                                             </p>
                                         </div>
                                     </div>
@@ -378,8 +402,8 @@ class TransportRequestResource extends Resource
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
                                                 <strong>Material:</strong> '.$record->material_description.'<br>
-                                                <strong>Origen:</strong> '.$record->pickup_address.'<br>
-                                                <strong>Destino:</strong> '.$record->delivery_address.'
+                                                <strong>Origen:</strong> '.MaterialRequestTransport::LOCATIONS[$record->pickup_location].' - '.$record->pickup_address.'<br>
+                                                <strong>Destino:</strong> '.MaterialRequestTransport::LOCATIONS[$record->delivery_location].' - '.$record->delivery_address.'
                                             </p>
                                         </div>
                                     </div>
@@ -463,8 +487,8 @@ class TransportRequestResource extends Resource
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles de la Solicitud</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
                                                 <strong>Material:</strong> '.$record->material_description.'<br>
-                                                <strong>Origen:</strong> '.$record->pickup_address.'<br>
-                                                <strong>Destino:</strong> '.$record->delivery_address.'
+                                                <strong>Origen:</strong> '.MaterialRequestTransport::LOCATIONS[$record->pickup_location].' - '.$record->pickup_address.'<br>
+                                                <strong>Destino:</strong> '.MaterialRequestTransport::LOCATIONS[$record->delivery_location].' - '.$record->delivery_address.'
                                             </p>
                                         </div>
                                     </div>
@@ -552,8 +576,8 @@ class TransportRequestResource extends Resource
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles del Envío</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
                                                 <strong>Material:</strong> '.$record->material_description.'<br>
-                                                <strong>Origen:</strong> '.$record->pickup_address.'<br>
-                                                <strong>Destino:</strong> '.$record->delivery_address.'
+                                                <strong>Origen:</strong> '.MaterialRequestTransport::LOCATIONS[$record->pickup_location].' - '.$record->pickup_address.'<br>
+                                                <strong>Destino:</strong> '.MaterialRequestTransport::LOCATIONS[$record->delivery_location].' - '.$record->delivery_address.'
                                             </p>
                                         </div>
                                     </div>
@@ -662,8 +686,8 @@ class TransportRequestResource extends Resource
                                             <p style="margin-left: 20px; color: #4a5568;">
                                                 <strong>Transportista:</strong> '.Auth::user()->name.'<br>
                                                 <strong>Material:</strong> '.$record->material_description.'<br>
-                                                <strong>Origen:</strong> '.$record->pickup_address.'<br>
-                                                <strong>Destino:</strong> '.$record->delivery_address.'
+                                                <strong>Origen:</strong> '.MaterialRequestTransport::LOCATIONS[$record->pickup_location].' - '.$record->pickup_address.'<br>
+                                                <strong>Destino:</strong> '.MaterialRequestTransport::LOCATIONS[$record->delivery_location].' - '.$record->delivery_address.'
                                             </p>
                                         </div>
                                     </div>
@@ -712,6 +736,18 @@ class TransportRequestResource extends Resource
                             });
                         }
                     }),
+
+                // Agregar acción de eliminar
+                DeleteAction::make()
+                    ->visible(fn (MaterialRequestTransport $record): bool => 
+                        $record->current_status === MaterialRequestTransport::STATUS_PENDING &&
+                        $record->requester_id === Auth::id()
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading('Eliminar solicitud')
+                    ->modalDescription('¿Está seguro que desea eliminar esta solicitud? Esta acción no se puede deshacer.')
+                    ->modalSubmitActionLabel('Sí, eliminar')
+                    ->modalCancelActionLabel('No, cancelar'),
             ])
             ->defaultSort('created_at', 'desc');
     }
@@ -770,5 +806,12 @@ class TransportRequestResource extends Resource
                     });
                 });
             });
+    }
+
+    // Agregar método para controlar la capacidad de eliminar
+    public static function canDelete(Model $record): bool
+    {
+        return $record->current_status === MaterialRequestTransport::STATUS_PENDING &&
+               $record->requester_id === Auth::id();
     }
 }

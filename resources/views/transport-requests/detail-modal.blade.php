@@ -1,6 +1,7 @@
 @php
     use App\Models\MaterialRequest;
     use Carbon\Carbon;
+    use App\Models\MaterialRequestTransport;
 @endphp
 
 <div class="space-y-6 p-4">
@@ -96,56 +97,29 @@
     </div>
 
     {{-- Grid de Recogida y Entrega --}}
-    <div class="grid md:grid-cols-2 gap-4">
-        {{-- Información de Recogida --}}
-        <div class="bg-white rounded-lg p-4 border border-gray-200">
-            <h3 class="font-bold text-lg mb-3 flex items-center gap-2 text-gray-900">
-                <x-heroicon-o-map-pin class="w-6 h-6 text-primary-600"/>
-                Información de Recogida
-            </h3>
-            <div class="space-y-3 text-gray-700">
-                <p class="flex items-center gap-2">
-                    <x-heroicon-o-home class="w-5 h-5 text-gray-500"/>
-                    <span class="font-medium">Dirección:</span>
-                    <span class="text-gray-600">{{ $request->pickup_address }}</span>
-                </p>
-                <p class="flex items-center gap-2">
-                    <x-heroicon-o-user class="w-5 h-5 text-gray-500"/>
-                    <span class="font-medium">Contacto:</span>
-                    <span class="text-gray-600">{{ $request->pickup_contact }}</span>
-                </p>
-                <p class="flex items-center gap-2">
-                    <x-heroicon-o-phone class="w-5 h-5 text-gray-500"/>
-                    <span class="font-medium">Teléfono:</span>
-                    <span class="text-gray-600">{{ $request->pickup_phone }}</span>
-                </p>
-            </div>
+    <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-1">
+            <h3 class="font-semibold">Información de Recogida</h3>
+            <p><strong>Ubicación:</strong> {{ $request->pickup_location ? MaterialRequestTransport::LOCATIONS[$request->pickup_location] : 'No especificada' }}</p>
+            <p><strong>Dirección:</strong> {{ $request->pickup_address }}</p>
+            <p><strong>Contacto:</strong> {{ $request->pickup_contact }}</p>
+            <p><strong>Teléfono:</strong> {{ $request->pickup_phone }}</p>
         </div>
 
-        {{-- Información de Entrega --}}
-        <div class="bg-white rounded-lg p-4 border border-gray-200">
-            <h3 class="font-bold text-lg mb-3 flex items-center gap-2 text-gray-900">
-                <x-heroicon-o-flag class="w-6 h-6 text-primary-600"/>
-                Información de Entrega
-            </h3>
-            <div class="space-y-3 text-gray-700">
-                <p class="flex items-center gap-2">
-                    <x-heroicon-o-home class="w-5 h-5 text-gray-500"/>
-                    <span class="font-medium">Dirección:</span>
-                    <span class="text-gray-600">{{ $request->delivery_address }}</span>
-                </p>
-                <p class="flex items-center gap-2">
-                    <x-heroicon-o-user class="w-5 h-5 text-gray-500"/>
-                    <span class="font-medium">Contacto:</span>
-                    <span class="text-gray-600">{{ $request->delivery_contact }}</span>
-                </p>
-                <p class="flex items-center gap-2">
-                    <x-heroicon-o-phone class="w-5 h-5 text-gray-500"/>
-                    <span class="font-medium">Teléfono:</span>
-                    <span class="text-gray-600">{{ $request->delivery_phone }}</span>
-                </p>
-            </div>
+        <div class="col-span-1">
+            <h3 class="font-semibold">Información de Entrega</h3>
+            <p><strong>Ubicación:</strong> {{ $request->delivery_location ? MaterialRequestTransport::LOCATIONS[$request->delivery_location] : 'No especificada' }}</p>
+            <p><strong>Dirección:</strong> {{ $request->delivery_address }}</p>
+            <p><strong>Contacto:</strong> {{ $request->delivery_contact }}</p>
+            <p><strong>Teléfono:</strong> {{ $request->delivery_phone }}</p>
         </div>
+
+        @if($request->package_image)
+        <div class="col-span-2">
+            <h3 class="font-semibold">Foto de las Cajas</h3>
+            <img src="{{ Storage::url($request->package_image) }}" alt="Foto de las cajas" class="mt-2 rounded-lg max-h-64">
+        </div>
+        @endif
     </div>
 
     {{-- Información del Transporte --}}
