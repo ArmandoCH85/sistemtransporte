@@ -116,6 +116,7 @@ class MaterialRequestResource extends Resource
                                 'lima_hospitalaria' => 'Lima Hospitalaria',
                                 'la_molina' => 'La Molina',
                                 'san_borja_ambulatoria' => 'San Borja Ambulatoria',
+                                'alto_caral' => 'Alto Caral',
                             ])
                             ->required()
                             ->label('Ubicación')
@@ -155,7 +156,8 @@ class MaterialRequestResource extends Resource
                                 'lima_ambulatoria' => 'Lima Ambulatoria',
                                 'lima_hospitalaria' => 'Lima Hospitalaria',
                                 'la_molina' => 'La Molina',
-                                'san_borja_ambulatoria' => 'San Borja Ambulatoria'
+                                'san_borja_ambulatoria' => 'San Borja Ambulatoria',
+                                'alto_caral' => 'Alto Caral',
                             ])
                             ->required()
                             ->label('Ubicación')
