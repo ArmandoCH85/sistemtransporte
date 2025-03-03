@@ -107,10 +107,7 @@ class MaterialRequest extends Model
         return $this->belongsTo(MaterialCategory::class, 'material_category_id');
     }
 
-    public function originArea()
-    {
-        return $this->belongsTo(Area::class, 'origin_area_id');
-    }
+
 
     public function transporters()
     {

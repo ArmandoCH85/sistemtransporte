@@ -22,6 +22,11 @@ use Illuminate\Database\Eloquent\Model;
 use Spatie\Permission\Models\Role;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Notifications\Notification;
+use Filament\Infolists\Components\Grid as InfolistGrid;
+use Filament\Infolists\Components\Section as InfolistSection;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Group;
+use Filament\Infolists\Components\ImageEntry;
 
 class MaterialRequestResource extends Resource
 {
@@ -70,7 +75,7 @@ class MaterialRequestResource extends Resource
                                     ->required()
                                     ->label('Categoría de Material'),
 
-                                // Campo de texto para el área de origen
+                                // Campo de selección de área de origen
                                 TextInput::make('origin_area_id')
                                     ->required()
                                     ->label('Área de Origen')
@@ -211,10 +216,12 @@ class MaterialRequestResource extends Resource
                     ->sortable()
                     ->label('Categoría'),
 
-                TextColumn::make('originArea.name')
+                // Mostrar el campo origin_area_id directamente como texto
+                TextColumn::make('origin_area_id')
                     ->searchable()
                     ->sortable()
-                    ->label('Área'),
+                    ->label('Área')
+                    ->formatStateUsing(fn (string $state): string => ucfirst($state)),
 
                 // Columna de estado con badges de colores
                 TextColumn::make('current_status')
@@ -241,13 +248,139 @@ class MaterialRequestResource extends Resource
                 Tables\Actions\ViewAction::make()
                     ->label('Ver Detalle')
                     ->icon('heroicon-o-eye')
-                    ->color('info'),
+                    ->color('info')
+                    ->modalWidth('4xl')
+                    ->modalHeading(fn(MaterialRequest $record) => "Solicitud #" . $record->id)
+                    ->infolist([
+                        InfolistGrid::make(2)
+                            ->schema([
+                                // Primera columna - Información General
+                                InfolistSection::make('Información General')
+                                    ->icon('heroicon-o-information-circle')
+                                    ->schema([
+                                        InfolistGrid::make(2)
+                                            ->schema([
+                                                TextEntry::make('id')
+                                                    ->label('Código')
+                                                    ->weight('bold'),
+
+                                                TextEntry::make('current_status')
+                                                    ->label('Estado')
+                                                    ->badge()
+                                                    ->color(fn(string $state): string => match ($state) {
+                                                        'pending' => 'warning',
+                                                        'accepted' => 'success',
+                                                        'rescheduled' => 'info',
+                                                        'completed' => 'success',
+                                                        'failed' => 'danger',
+                                                        default => 'gray',
+                                                    })
+                                                    ->formatStateUsing(fn(string $state): string => MaterialRequest::getStatuses()[$state] ?? $state),
+                                            ]),
+
+                                        InfolistGrid::make(2)
+                                            ->schema([
+                                                TextEntry::make('requester.name')
+                                                    ->label('Solicitante')
+                                                    ->icon('heroicon-o-user'),
+
+                                                TextEntry::make('created_at')
+                                                    ->label('Fecha')
+                                                    ->dateTime('d/m/Y')
+                                                    ->icon('heroicon-o-calendar'),
+                                            ]),
+
+                                        InfolistGrid::make(2)
+                                            ->schema([
+                                                TextEntry::make('materialCategory.name')
+                                                    ->label('Categoría')
+                                                    ->icon('heroicon-o-tag'),
+
+                                                TextEntry::make('origin_area_id')
+                                                    ->label('Área')
+                                                    ->icon('heroicon-o-building-office'),
+                                            ]),
+
+                                        TextEntry::make('material_description')
+                                            ->label('Descripción')
+                                            ->columnSpanFull(),
+
+                                        TextEntry::make('comments')
+                                            ->label('Comentarios')
+                                            ->visible(fn ($record) => !empty($record->comments))
+                                            ->columnSpanFull(),
+
+                                        ImageEntry::make('package_image')
+                                            ->label('Imagen')
+                                            ->disk('public')
+                                            ->height(150)
+                                            ->visible(fn ($record) => $record->package_image)
+                                            ->columnSpanFull(),
+                                    ]),
+
+                                // Segunda columna - Puntos de Recogida y Entrega (con tamaños uniformes)
+                                InfolistSection::make()
+                                    ->schema([
+                                        // Sección de Recogida
+                                        InfolistSection::make('Punto de Recogida')
+                                            ->icon('heroicon-o-truck')
+                                            ->extraAttributes(['class' => 'border border-gray-200 rounded-xl p-4 mb-4'])
+                                            ->schema([
+                                                TextEntry::make('pickup_location')
+                                                    ->label('Sede')
+                                                    ->formatStateUsing(fn ($state) => ucfirst(str_replace('_', ' ', $state)))
+                                                    ->weight('medium'),
+
+                                                TextEntry::make('pickup_address')
+                                                    ->label('Dirección')
+                                                    ->columnSpanFull(),
+
+                                                InfolistGrid::make(2)
+                                                    ->schema([
+                                                        TextEntry::make('pickup_contact')
+                                                            ->label('Contacto')
+                                                            ->icon('heroicon-o-user'),
+
+                                                        TextEntry::make('pickup_phone')
+                                                            ->label('Teléfono')
+                                                            ->icon('heroicon-o-phone'),
+                                                    ]),
+                                            ]),
+
+                                        // Sección de Entrega (con la misma estructura y diseño que Recogida)
+                                        InfolistSection::make('Punto de Entrega')
+                                            ->icon('heroicon-o-map-pin')
+                                            ->extraAttributes(['class' => 'border border-gray-200 rounded-xl p-4'])
+                                            ->schema([
+                                                TextEntry::make('delivery_location')
+                                                    ->label('Sede')
+                                                    ->formatStateUsing(fn ($state) => ucfirst(str_replace('_', ' ', $state)))
+                                                    ->weight('medium'),
+
+                                                TextEntry::make('delivery_address')
+                                                    ->label('Dirección')
+                                                    ->columnSpanFull(),
+
+                                                InfolistGrid::make(2)
+                                                    ->schema([
+                                                        TextEntry::make('delivery_contact')
+                                                            ->label('Contacto')
+                                                            ->icon('heroicon-o-user'),
+
+                                                        TextEntry::make('delivery_phone')
+                                                            ->label('Teléfono')
+                                                            ->icon('heroicon-o-phone'),
+                                                    ]),
+                                            ]),
+                                    ]),
+                            ]),
+                    ]),
 
                 Tables\Actions\DeleteAction::make()
                     ->label('Eliminar')
                     ->icon('heroicon-o-trash')
                     ->color('danger')
-                    ->visible(fn (MaterialRequest $record): bool => 
+                    ->visible(fn (MaterialRequest $record): bool =>
                         $record->current_status === MaterialRequest::STATUS_PENDING &&
                         $record->requester_id === Auth::id()
                     )
@@ -259,7 +392,7 @@ class MaterialRequestResource extends Resource
                     ->after(fn () => Notification::make()->success()->title('Solicitud eliminada')->send()),
 
                 Tables\Actions\EditAction::make()
-                    ->visible(fn (MaterialRequest $record): bool => 
+                    ->visible(fn (MaterialRequest $record): bool =>
                         $record->current_status === MaterialRequest::STATUS_PENDING &&
                         $record->requester_id === Auth::id()
                     ),
