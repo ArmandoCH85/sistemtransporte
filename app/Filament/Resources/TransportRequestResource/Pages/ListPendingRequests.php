@@ -16,6 +16,13 @@ use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use App\Models\RequestTransporter;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\FileUpload;
+use Filament\Infolists\Components\Section as InfolistSection;
+use Filament\Infolists\Components\Grid as InfolistGrid;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ImageEntry;
+use Illuminate\Support\Facades\DB;
 
 class ListPendingRequests extends ListRecords
 {
@@ -206,6 +213,68 @@ class ListPendingRequests extends ListRecords
                         $this->refreshList();
                     }),
 
+                ViewAction::make('viewFailed')
+                    ->label('Ver Detalle')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->visible(fn (MaterialRequestTransport $record): bool =>
+                        $record->current_status === MaterialRequestTransport::STATUS_FAILED
+                    )
+                    ->infolist([
+                        InfolistSection::make('Motivo del Fallo')
+                            ->icon('heroicon-o-x-circle')
+                            ->iconColor('danger')
+                            ->schema([
+                                TextEntry::make('failureReason')
+                                    ->label('Motivo')
+                                    ->getStateUsing(function (MaterialRequestTransport $record) {
+                                        $transporterData = RequestTransporter::where('request_id', $record->id)
+                                            ->where('transporter_id', Auth::id())
+                                            ->where('assignment_status', 'accepted')
+                                            ->first();
+                                        return $transporterData ? $transporterData->comments : 'No se especificó motivo';
+                                    }),
+                            ]),
+
+                        InfolistSection::make('Detalles de la Solicitud')
+                            ->schema([
+                                InfolistGrid::make(2)
+                                    ->schema([
+                                        TextEntry::make('id')
+                                            ->label('ID'),
+                                        TextEntry::make('created_at')
+                                            ->label('Fecha')
+                                            ->dateTime('d/m/Y H:i'),
+                                        TextEntry::make('requester.name')
+                                            ->label('Solicitante'),
+                                        TextEntry::make('material_description')
+                                            ->label('Material'),
+                                        TextEntry::make('pickup_location')
+                                            ->label('Origen')
+                                            ->formatStateUsing(fn (string $state): string => MaterialRequestTransport::LOCATIONS[$state] ?? $state),
+                                        TextEntry::make('delivery_location')
+                                            ->label('Destino')
+                                            ->formatStateUsing(fn (string $state): string => MaterialRequestTransport::LOCATIONS[$state] ?? $state),
+                                    ]),
+                            ]),
+
+                        InfolistSection::make('Evidencia Fotográfica')
+                            ->schema([
+                                ImageEntry::make('failureImage')
+                                    ->label('')
+                                    ->getStateUsing(function (MaterialRequestTransport $record) {
+                                        $image = \DB::table('images')
+                                            ->where('request_id', $record->id)
+                                            ->where('type', 'delivery')
+                                            ->orderBy('created_at', 'desc')
+                                            ->first();
+                                        return $image ? $image->image_url : null;
+                                    })
+                                    ->disk('public')
+                                    ->visible(fn ($state) => $state !== null),
+                            ]),
+                    ]),
+
                 Action::make('fail')
                     ->label('No se realizó')
                     ->icon('heroicon-o-x-circle')
@@ -213,14 +282,60 @@ class ListPendingRequests extends ListRecords
                     ->visible(fn (MaterialRequestTransport $record): bool =>
                         $record->current_status === MaterialRequestTransport::STATUS_ACCEPTED
                     )
-                    ->action(function (MaterialRequestTransport $record) {
+                    ->form([
+                        Textarea::make('failure_reason')
+                            ->label('Motivo')
+                            ->placeholder('Explique por qué no se pudo realizar el servicio')
+                            ->required()
+                            ->maxLength(1000)
+                            ->rows(3),
+
+                        FileUpload::make('failure_image')
+                            ->label('Evidencia fotográfica')
+                            ->helperText('Adjunte una imagen que evidencie el motivo')
+                            ->image()
+                            ->required()
+                            ->disk('public')
+                            ->directory('failure-images')
+                            ->visibility('public')
+                            ->maxSize(5120) // 5MB
+                    ])
+                    ->action(function (MaterialRequestTransport $record, array $data) {
+                        // 1. Actualizar estado de la solicitud
                         $record->update([
                             'current_status' => MaterialRequestTransport::STATUS_FAILED,
                         ]);
 
+                        // 2. Agregar comentario en request_transporters
+                        $transporterRecord = RequestTransporter::where('request_id', $record->id)
+                            ->where('transporter_id', Auth::id())
+                            ->where('assignment_status', 'accepted')
+                            ->first();
+
+                        if ($transporterRecord) {
+                            $transporterRecord->update([
+                                'comments' => $data['failure_reason']
+                            ]);
+                        }
+
+                        // 3. Guardar la imagen en la tabla images
+                        if (isset($data['failure_image'])) {
+                            $imageUrl = $data['failure_image'];
+
+                            // Crear registro en la tabla images
+                            \DB::table('images')->insert([
+                                'request_id' => $record->id,
+                                'type' => 'delivery', // Asumimos que es tipo delivery para la evidencia de fallo
+                                'image_url' => $imageUrl,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+
                         Notification::make()
                             ->success()
                             ->title('Servicio marcado como no realizado')
+                            ->body('Se ha registrado el motivo y la evidencia fotográfica')
                             ->send();
 
                         $this->refreshList();
