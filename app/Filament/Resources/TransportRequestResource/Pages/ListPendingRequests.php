@@ -23,6 +23,7 @@ use Filament\Infolists\Components\Grid as InfolistGrid;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ImageEntry;
 use Illuminate\Support\Facades\DB;
+use Filament\Forms\Components\DateTimePicker;
 
 class ListPendingRequests extends ListRecords
 {
@@ -172,14 +173,27 @@ class ListPendingRequests extends ListRecords
                             MaterialRequestTransport::STATUS_RESCHEDULED
                         ])
                     )
-                    ->action(function (MaterialRequestTransport $record) {
+                    ->form([
+                        DateTimePicker::make('scheduled_date')
+                            ->label('Nueva fecha programada')
+                            ->required()
+                            ->minDate(now())
+                            ->withoutSeconds()
+                            ->native(false)
+                            ->placeholder('Seleccione fecha y hora')
+                            ->helperText('Elija la nueva fecha y hora para realizar este servicio')
+                            ->displayFormat('d/m/Y H:i'),
+                    ])
+                    ->action(function (MaterialRequestTransport $record, array $data) {
                         $record->update([
-                            'current_status' => MaterialRequestTransport::STATUS_RESCHEDULED
+                            'current_status' => MaterialRequestTransport::STATUS_RESCHEDULED,
+                            'scheduled_date' => $data['scheduled_date'],
                         ]);
 
                         Notification::make()
                             ->success()
                             ->title('Solicitud reprogramada correctamente')
+                            ->body('La solicitud ha sido reprogramada para el ' . date('d/m/Y H:i', strtotime($data['scheduled_date'])))
                             ->send();
 
                         $this->refreshList();

@@ -78,8 +78,8 @@ class MaterialRequestResource extends Resource
                                 // Campo de selección de área de origen
                                 TextInput::make('origin_area_id')
                                     ->required()
-                                    ->label('Área de Origen')
-                                    ->placeholder('Ingrese el área de origen')
+                                    ->label('Area del solicitante')
+                                    ->placeholder('Ingrese el Area del solicitante')
                                     ->maxLength(255)
                                     ->helperText('Ingrese el nombre del área desde donde se recogerá el material.'),
                             ]),
@@ -115,6 +115,7 @@ class MaterialRequestResource extends Resource
                                 'lima_ambulatoria' => 'Lima Ambulatoria',
                                 'lima_hospitalaria' => 'Lima Hospitalaria',
                                 'la_molina' => 'La Molina',
+                                'san_borja_ambulatoria' => 'San Borja Ambulatoria',
                             ])
                             ->required()
                             ->label('Ubicación')
@@ -154,6 +155,7 @@ class MaterialRequestResource extends Resource
                                 'lima_ambulatoria' => 'Lima Ambulatoria',
                                 'lima_hospitalaria' => 'Lima Hospitalaria',
                                 'la_molina' => 'La Molina',
+                                'san_borja_ambulatoria' => 'San Borja Ambulatoria'
                             ])
                             ->required()
                             ->label('Ubicación')
