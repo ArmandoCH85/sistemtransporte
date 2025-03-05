@@ -137,6 +137,7 @@ class TransportRequestResource extends Resource
                                 'lima_ambulatoria' => 'Lima Ambulatoria',
                                 'lima_hospitalaria' => 'Lima Hospitalaria',
                                 'la_molina' => 'La Molina',
+                                'alto_caral' => 'Alto Caral',
                             ])
                             ->required()
                             ->label('Ubicación')
@@ -739,7 +740,7 @@ class TransportRequestResource extends Resource
 
                 // Agregar acción de eliminar
                 DeleteAction::make()
-                    ->visible(fn (MaterialRequestTransport $record): bool => 
+                    ->visible(fn (MaterialRequestTransport $record): bool =>
                         $record->current_status === MaterialRequestTransport::STATUS_PENDING &&
                         $record->requester_id === Auth::id()
                     )

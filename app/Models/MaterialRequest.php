@@ -26,9 +26,11 @@ class MaterialRequest extends Model
         'surco' => 'Surco',
         'san_isidro' => 'San Isidro',
         'san_borja_hospitalaria' => 'San Borja Hospitalaria',
+        'san_borja_ambulatoria' => 'San Borja Ambulatoria',
         'lima_ambulatoria' => 'Lima Ambulatoria',
         'lima_hospitalaria' => 'Lima Hospitalaria',
         'la_molina' => 'La Molina',
+        'alto_caral' => 'Alto Caral',
     ];
 
     protected $fillable = [

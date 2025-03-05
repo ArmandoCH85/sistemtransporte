@@ -100,7 +100,7 @@
     <div class="grid grid-cols-2 gap-4">
         <div class="col-span-1">
             <h3 class="font-semibold">Información de Recogida</h3>
-            <p><strong>Ubicación:</strong> {{ $request->pickup_location ? MaterialRequestTransport::LOCATIONS[$request->pickup_location] : 'No especificada' }}</p>
+            <p><strong>Ubicación:</strong> {{ $request->pickup_location ? MaterialRequest::LOCATIONS[$request->pickup_location] : 'No especificada' }}</p>
             <p><strong>Dirección:</strong> {{ $request->pickup_address }}</p>
             <p><strong>Contacto:</strong> {{ $request->pickup_contact }}</p>
             <p><strong>Teléfono:</strong> {{ $request->pickup_phone }}</p>
@@ -108,7 +108,7 @@
 
         <div class="col-span-1">
             <h3 class="font-semibold">Información de Entrega</h3>
-            <p><strong>Ubicación:</strong> {{ $request->delivery_location ? MaterialRequestTransport::LOCATIONS[$request->delivery_location] : 'No especificada' }}</p>
+            <p><strong>Ubicación:</strong> {{ $request->delivery_location ? MaterialRequest::LOCATIONS[$request->delivery_location] : 'No especificada' }}</p>
             <p><strong>Dirección:</strong> {{ $request->delivery_address }}</p>
             <p><strong>Contacto:</strong> {{ $request->delivery_contact }}</p>
             <p><strong>Teléfono:</strong> {{ $request->delivery_phone }}</p>
