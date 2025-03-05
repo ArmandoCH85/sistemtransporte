@@ -138,6 +138,7 @@ class TransportRequestResource extends Resource
                                 'lima_hospitalaria' => 'Lima Hospitalaria',
                                 'la_molina' => 'La Molina',
                                 'alto_caral' => 'Alto Caral',
+                                'san_borja_ambulatoria' => 'San Borja Ambulatoria',
                             ])
                             ->required()
                             ->label('Ubicación')
@@ -180,6 +181,8 @@ class TransportRequestResource extends Resource
                                 'lima_ambulatoria' => 'Lima Ambulatoria',
                                 'lima_hospitalaria' => 'Lima Hospitalaria',
                                 'la_molina' => 'La Molina',
+                                'alto_caral' => 'Alto Caral',
+                                'san_borja_ambulatoria' => 'San Borja Ambulatoria',
                             ])
                             ->required()
                             ->label('Ubicación')

@@ -156,6 +156,7 @@ class MaterialRequestTransport extends Model
         'lima_hospitalaria' => 'Lima Hospitalaria',
         'la_molina' => 'La Molina',
         'alto_caral' => 'Alto Caral',
+        'san_borja_ambulatoria' => 'San Borja Ambulatoria',
     ];
 
     // Método helper para obtener las ubicaciones
