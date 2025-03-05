@@ -61,7 +61,7 @@ class AdminTransportResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('originArea.name')
+                Tables\Columns\TextColumn::make('origin_area_id')
                     ->label('Área')
                     ->searchable()
                     ->sortable(),
@@ -120,11 +120,6 @@ class AdminTransportResource extends Resource
                     ->multiple()
                     ->preload(),
 
-                SelectFilter::make('origin_area_id')
-                    ->label('Área')
-                    ->relationship('originArea', 'name')
-                    ->multiple()
-                    ->preload(),
 
                 SelectFilter::make('transporter')
                     ->label('Transportista')
