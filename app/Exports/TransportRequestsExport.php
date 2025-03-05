@@ -29,7 +29,7 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
         return MaterialRequest::with([
             'requester',
             'materialCategory',
-            'originArea',
+            'origin',
             'currentTransporter.transporter'
         ])->get();
     }
@@ -73,7 +73,7 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             Carbon::parse($request->created_at)->format('d/m/Y H:i'),
             $request->requester->name ?? 'N/A',
             $request->materialCategory->name ?? 'N/A',
-            $request->originArea->name ?? 'N/A',
+            $request->origin->name ?? 'N/A',
             MaterialRequest::getStatuses()[$request->current_status] ?? $request->current_status,
             $request->currentTransporter->transporter->name ?? 'No asignado',
             $request->currentTransporter ? Carbon::parse($request->currentTransporter->assignment_date)->format('d/m/Y H:i') : 'N/A',

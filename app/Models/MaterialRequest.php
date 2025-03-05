@@ -109,7 +109,16 @@ class MaterialRequest extends Model
         return $this->belongsTo(MaterialCategory::class, 'material_category_id');
     }
 
+    // Relación corregida - asegúrate que el modelo exista
+    public function origin()
+    {
+        // Si tienes un modelo específico para áreas, úsalo aquí
+        return $this->belongsTo(\App\Models\Area::class, 'origin_area_id');
 
+        // Alternativas posibles dependiendo de tu estructura:
+        // return $this->belongsTo(\App\Models\Department::class, 'origin_area_id');
+        // return $this->belongsTo(\App\Models\OriginArea::class, 'origin_area_id');
+    }
 
     public function transporters()
     {
