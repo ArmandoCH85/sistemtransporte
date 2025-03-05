@@ -32,7 +32,7 @@
                 <p class="flex items-center gap-2">
                     <x-heroicon-o-building-office class="w-5 h-5 text-gray-600"/>
                     <span class="font-semibold">Área de Origen:</span>
-                    <span class="text-gray-700">{{ $request->originArea->name ?? 'N/A' }}</span>
+                    <span class="text-gray-700">{{ $request->origin_area_id ?? 'N/A' }}</span>
                 </p>
             </div>
         </div>
