@@ -29,7 +29,7 @@ class Login extends BaseAuth
             ->required()
             ->autocomplete()
             ->autofocus()
-            ->extraInputAttributes(['tabindex' => 1]);
+            ->extraInputAttributes(['tabindex' => 1, 'style' => 'font-weight: bold;']);
     }
 
     protected function getCredentialsFromFormData(array $data): array
