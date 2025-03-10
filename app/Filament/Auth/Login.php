@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Lang;
 
 class Login extends BaseAuth
 {
+    protected static string $view = 'filament-panels::pages.auth.login';
+
     public function form(Form $form): Form
     {
         return $form
