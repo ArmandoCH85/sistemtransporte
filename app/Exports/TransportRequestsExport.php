@@ -46,9 +46,11 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             'Transportista',
             'Fecha de Asignación',
             'Dirección de Recogida',
+            'Ubicación de Recogida',
             'Contacto Recogida',
             'Teléfono Recogida',
             'Dirección de Entrega',
+            'Ubicación de Entrega',
             'Contacto Entrega',
             'Teléfono Entrega',
             'Descripción del Material',
@@ -68,6 +70,14 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             $serviceTime = $assignmentDate->diffInHours($completionDate);
         }
 
+        $pickupLocation = isset($request->pickup_location) && isset(MaterialRequest::LOCATIONS[$request->pickup_location])
+            ? MaterialRequest::LOCATIONS[$request->pickup_location]
+            : 'No especificado';
+
+        $deliveryLocation = isset($request->delivery_location) && isset(MaterialRequest::LOCATIONS[$request->delivery_location])
+            ? MaterialRequest::LOCATIONS[$request->delivery_location]
+            : 'No especificado';
+
         return [
             $request->id,
             Carbon::parse($request->created_at)->format('d/m/Y H:i'),
@@ -78,9 +88,11 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             $request->currentTransporter->transporter->name ?? 'No asignado',
             $request->currentTransporter ? Carbon::parse($request->currentTransporter->assignment_date)->format('d/m/Y H:i') : 'N/A',
             $request->pickup_address,
+            $pickupLocation,
             $request->pickup_contact,
             $request->pickup_phone,
             $request->delivery_address,
+            $deliveryLocation,
             $request->delivery_contact,
             $request->delivery_phone,
             $request->material_description,

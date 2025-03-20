@@ -66,6 +66,18 @@ class AdminTransportResource extends Resource
                     ->searchable()
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('pickup_location')
+                    ->label('Ubicación de Recogida')
+                    ->formatStateUsing(fn (string $state = null): string => $state ? \App\Models\MaterialRequest::LOCATIONS[$state] ?? $state : '-')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('delivery_location')
+                    ->label('Ubicación de Entrega')
+                    ->formatStateUsing(fn (string $state = null): string => $state ? \App\Models\MaterialRequest::LOCATIONS[$state] ?? $state : '-')
+                    ->searchable()
+                    ->sortable(),
+
                 Tables\Columns\BadgeColumn::make('current_status')
                     ->colors([
                         'warning' => 'pending',
@@ -120,6 +132,15 @@ class AdminTransportResource extends Resource
                     ->multiple()
                     ->preload(),
 
+                SelectFilter::make('pickup_location')
+                    ->label('Ubicación de Recogida')
+                    ->options(\App\Models\MaterialRequest::LOCATIONS)
+                    ->multiple(),
+
+                SelectFilter::make('delivery_location')
+                    ->label('Ubicación de Entrega')
+                    ->options(\App\Models\MaterialRequest::LOCATIONS)
+                    ->multiple(),
 
                 SelectFilter::make('transporter')
                     ->label('Transportista')

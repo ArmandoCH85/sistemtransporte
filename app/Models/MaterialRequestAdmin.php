@@ -26,7 +26,7 @@ class MaterialRequestAdmin extends Model
         'pickup_address', 'pickup_contact', 'pickup_phone',
         'delivery_address', 'delivery_contact', 'delivery_phone',
         'current_status', 'evidence_image', 'rescheduled_date',
-        'reschedule_comments'
+        'reschedule_comments', 'pickup_location', 'delivery_location'
     ];
 
     protected static function boot()
