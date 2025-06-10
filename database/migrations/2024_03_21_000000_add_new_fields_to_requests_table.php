@@ -20,8 +20,9 @@ return new class extends Migration
                 $table->string('delivery_location')->after('delivery_address');
             }
 
-            // Hacer nullable el material_category_id
+            // Hacer nullable el material_category_id y origin_area_id
             $table->unsignedBigInteger('material_category_id')->nullable()->change();
+            $table->string('origin_area_id')->nullable()->change();
         });
     }
 
@@ -30,6 +31,7 @@ return new class extends Migration
         Schema::table('requests', function (Blueprint $table) {
             $table->dropColumn(['package_image', 'pickup_location', 'delivery_location']);
             $table->unsignedBigInteger('material_category_id')->nullable(false)->change();
+            $table->string('origin_area_id')->nullable(false)->change();
         });
     }
 };
