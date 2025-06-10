@@ -72,12 +72,10 @@ class MaterialRequestResource extends Resource
                                     ->relationship('materialCategory', 'name')
                                     ->preload()
                                     ->searchable()
-                                    ->required()
                                     ->label('Categoría de Material'),
 
                                 // Campo de selección de área de origen
                                 TextInput::make('origin_area_id')
-                                    ->required()
                                     ->label('Area del solicitante')
                                     ->placeholder('Ingrese el Area del solicitante')
                                     ->maxLength(255)
@@ -186,7 +184,7 @@ class MaterialRequestResource extends Resource
                     ])->columns(2),
 
                 Section::make('Evidencia Fotográfica')
-                    ->description('Foto de las cajas o items a transportar')
+                    ->description('Foto de las cajas o items a transportar (Tamaño máximo: 5MB por imagen)')
                     ->schema([
                         FileUpload::make('package_image')
                             ->image()
@@ -194,7 +192,7 @@ class MaterialRequestResource extends Resource
                             ->directory('package-images')
                             ->maxSize(5120)
                             ->label('Foto de las cajas')
-                            ->helperText('Si envías una o más cajas debes adjuntar una foto')
+                            ->helperText('Si envías una o más cajas debes adjuntar una foto. Tamaño máximo permitido: 5MB')
                             ->columnSpanFull(),
                     ]),
             ])->statePath('data');
