@@ -57,6 +57,7 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             'Comentarios',
             'Motivo de Reprogramación',
             'Nueva Fecha (Reprogramación)',
+            'Fecha de Finalización',
             'Tiempo de Servicio (Horas)'
         ];
     }
@@ -64,6 +65,12 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
     public function map($request): array
     {
         $serviceTime = null;
+        $completionDateFormatted = 'N/A';
+
+        if ($request->current_status === MaterialRequest::STATUS_COMPLETED) {
+            $completionDateFormatted = Carbon::parse($request->updated_at)->format('d/m/Y H:i');
+        }
+
         if ($request->current_status === MaterialRequest::STATUS_COMPLETED && $request->currentTransporter) {
             $assignmentDate = Carbon::parse($request->currentTransporter->assignment_date);
             $completionDate = Carbon::parse($request->updated_at);
@@ -99,6 +106,7 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             $request->comments,
             $request->reschedule_comments ?? 'N/A',
             $request->rescheduled_date ? Carbon::parse($request->rescheduled_date)->format('d/m/Y H:i') : 'N/A',
+            $completionDateFormatted,
             $serviceTime ?? 'N/A'
         ];
     }
