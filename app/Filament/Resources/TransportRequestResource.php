@@ -57,10 +57,10 @@ class TransportRequestResource extends Resource
      */
 
 
-     protected static function getPermissionPrefixName(): string
-     {
-         return 'transport_request';
-     }
+    protected static function getPermissionPrefixName(): string
+    {
+        return 'transport_request';
+    }
 
     public static function form(Form $form): Form
     {
@@ -84,7 +84,7 @@ class TransportRequestResource extends Resource
                             ->relationship(
                                 'originArea',
                                 'name',
-                                fn ($query) => $query->active()
+                                fn($query) => $query->active()
                             )
                             ->required()
                             ->searchable()
@@ -252,7 +252,7 @@ class TransportRequestResource extends Resource
 
                 TextColumn::make('current_status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'pending' => 'warning',
                         'accepted' => 'success',
                         'rescheduled' => 'info',
@@ -260,37 +260,37 @@ class TransportRequestResource extends Resource
                         'failed' => 'danger',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn (string $state): string => MaterialRequestTransport::getStatuses()[$state] ?? $state)
+                    ->formatStateUsing(fn(string $state): string => MaterialRequestTransport::getStatuses()[$state] ?? $state)
                     ->label('Estado'),
             ])
             ->paginated([
                 'defaultPerPage' => 10,
             ])
             ->modifyQueryUsing(function (Builder $query) {
-                if (! request()->routeIs('*.transport-requests.index')) {
+                if (!request()->routeIs('*.transport-requests.index')) {
                     $query->where(function ($query) {
                         $query->whereIn('current_status', [
                             MaterialRequestTransport::STATUS_PENDING,
                             MaterialRequestTransport::STATUS_RESCHEDULED
                         ])
-                        ->orWhere(function ($query) {
-                            $query->where('current_status', MaterialRequestTransport::STATUS_ACCEPTED)
-                                ->whereHas('currentTransporter', function ($query) {
-                                    $query->where('transporter_id', Auth::id());
-                                });
-                        })
-                        ->orWhere(function ($query) {
-                            $query->where('current_status', MaterialRequestTransport::STATUS_COMPLETED)
-                                ->whereHas('currentTransporter', function ($query) {
-                                    $query->where('transporter_id', Auth::id());
-                                });
-                        })
-                        ->orWhere(function ($query) {
-                            $query->where('current_status', MaterialRequestTransport::STATUS_FAILED)
-                                ->whereHas('currentTransporter', function ($query) {
-                                    $query->where('transporter_id', Auth::id());
-                                });
-                        });
+                            ->orWhere(function ($query) {
+                                $query->where('current_status', MaterialRequestTransport::STATUS_ACCEPTED)
+                                    ->whereHas('currentTransporter', function ($query) {
+                                        $query->where('transporter_id', Auth::id());
+                                    });
+                            })
+                            ->orWhere(function ($query) {
+                                $query->where('current_status', MaterialRequestTransport::STATUS_COMPLETED)
+                                    ->whereHas('currentTransporter', function ($query) {
+                                        $query->where('transporter_id', Auth::id());
+                                    });
+                            })
+                            ->orWhere(function ($query) {
+                                $query->where('current_status', MaterialRequestTransport::STATUS_FAILED)
+                                    ->whereHas('currentTransporter', function ($query) {
+                                        $query->where('transporter_id', Auth::id());
+                                    });
+                            });
                     });
                 }
                 return $query;
@@ -322,7 +322,8 @@ class TransportRequestResource extends Resource
                     ->icon('heroicon-o-check')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn ($record) =>
+                    ->visible(
+                        fn($record) =>
                         $record->current_status === MaterialRequestTransport::STATUS_PENDING ||
                         $record->current_status === MaterialRequestTransport::STATUS_RESCHEDULED
                     )
@@ -348,7 +349,7 @@ class TransportRequestResource extends Resource
                                 'title' => 'Solicitud de Material Aceptada',
                                 'content' => '
                                 <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
-                                    <h2 style="color: #2d3748; margin-bottom: 20px;">✅ Solicitud #'.$record->id.' Aceptada</h2>
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">✅ Solicitud #' . $record->id . ' Aceptada</h2>
 
                                     <p style="color: #4a5568; margin-bottom: 20px;">
                                         Su solicitud ha sido aceptada y será atendida por un transportista.
@@ -358,16 +359,16 @@ class TransportRequestResource extends Resource
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">🚚 Datos del Transportista</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Nombre:</strong> '.Auth::user()->name.'<br>
+                                                <strong>Nombre:</strong> ' . Auth::user()->name . '<br>
                                             </p>
                                         </div>
 
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles de la Solicitud</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Material:</strong> '.$record->material_description.'<br>
-                                                <strong>Origen:</strong> '.MaterialRequestTransport::LOCATIONS[$record->pickup_location].' - '.$record->pickup_address.'<br>
-                                                <strong>Destino:</strong> '.MaterialRequestTransport::LOCATIONS[$record->delivery_location].' - '.$record->delivery_address.'
+                                                <strong>Material:</strong> ' . $record->material_description . '<br>
+                                                <strong>Origen:</strong> ' . MaterialRequestTransport::LOCATIONS[$record->pickup_location] . ' - ' . $record->pickup_address . '<br>
+                                                <strong>Destino:</strong> ' . MaterialRequestTransport::LOCATIONS[$record->delivery_location] . ' - ' . $record->delivery_address . '
                                             </p>
                                         </div>
                                     </div>
@@ -378,9 +379,9 @@ class TransportRequestResource extends Resource
                                 </div>
                                 ',
                             ];
-                            Mail::send('emails.test', ['data' => $details], function($message) use ($usuario, $details, $record) {
+                            Mail::send('emails.test', ['data' => $details], function ($message) use ($usuario, $details, $record) {
                                 $message->to($usuario->email)
-                                        ->subject("Solicitud #{$record->id} - Aceptada");
+                                    ->subject("Solicitud #{$record->id} - Aceptada");
                             });
                         }
 
@@ -391,23 +392,23 @@ class TransportRequestResource extends Resource
                                 'title' => 'Solicitud de Material Asignada',
                                 'content' => '
                                 <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
-                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #'.$record->id.' Asignada</h2>
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #' . $record->id . ' Asignada</h2>
 
                                     <div style="background-color: white; padding: 20px; border-radius: 8px;">
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">🚚 Asignación</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
-                                                <strong>Fecha de Asignación:</strong> '.now()->format('d/m/Y H:i').'
+                                                <strong>Transportista:</strong> ' . Auth::user()->name . '<br>
+                                                <strong>Fecha de Asignación:</strong> ' . now()->format('d/m/Y H:i') . '
                                             </p>
                                         </div>
 
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Material:</strong> '.$record->material_description.'<br>
-                                                <strong>Origen:</strong> '.MaterialRequestTransport::LOCATIONS[$record->pickup_location].' - '.$record->pickup_address.'<br>
-                                                <strong>Destino:</strong> '.MaterialRequestTransport::LOCATIONS[$record->delivery_location].' - '.$record->delivery_address.'
+                                                <strong>Material:</strong> ' . $record->material_description . '<br>
+                                                <strong>Origen:</strong> ' . MaterialRequestTransport::LOCATIONS[$record->pickup_location] . ' - ' . $record->pickup_address . '<br>
+                                                <strong>Destino:</strong> ' . MaterialRequestTransport::LOCATIONS[$record->delivery_location] . ' - ' . $record->delivery_address . '
                                             </p>
                                         </div>
                                     </div>
@@ -418,9 +419,9 @@ class TransportRequestResource extends Resource
                                 </div>
                                 ',
                             ];
-                            Mail::send('emails.test', ['data' => $details], function($message) use ($admin, $details, $record) {
+                            Mail::send('emails.test', ['data' => $details], function ($message) use ($admin, $details, $record) {
                                 $message->to($admin->email)
-                                        ->subject("Solicitud #{$record->id} - Asignada a Transportista");
+                                    ->subject("Solicitud #{$record->id} - Asignada a Transportista");
                             });
                         }
                     }),
@@ -437,10 +438,11 @@ class TransportRequestResource extends Resource
                             ->label('Comentarios')
                             ->required(),
                     ])
-                    ->visible(fn ($record) =>
+                    ->visible(
+                        fn($record) =>
                         $record->current_status === MaterialRequestTransport::STATUS_PENDING ||
                         $record->current_status === MaterialRequestTransport::STATUS_RESCHEDULED &&
-                         $record->currentTransporter?->transporter_id === Auth::id()
+                        $record->currentTransporter?->transporter_id === Auth::id()
                     )
                     ->action(function (MaterialRequestTransport $record, array $data) {
                         // 1. Actualizar el estado y datos de la solicitud
@@ -471,7 +473,7 @@ class TransportRequestResource extends Resource
                                 'title' => 'Solicitud de Material Reprogramada',
                                 'content' => '
                                 <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
-                                    <h2 style="color: #2d3748; margin-bottom: 20px;">🗓️ Solicitud #'.$record->id.' Reprogramada</h2>
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">🗓️ Solicitud #' . $record->id . ' Reprogramada</h2>
 
                                     <p style="color: #4a5568; margin-bottom: 20px;">
                                         Su solicitud ha sido reprogramada por el siguiente motivo:
@@ -481,18 +483,18 @@ class TransportRequestResource extends Resource
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">⏰ Nueva Programación</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Nueva Fecha:</strong> '.\Carbon\Carbon::parse($data['new_date'])->format('d/m/Y H:i').'<br>
-                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
-                                                <strong>Motivo:</strong> '.$data['comments'].'
+                                                <strong>Nueva Fecha:</strong> ' . \Carbon\Carbon::parse($data['new_date'])->format('d/m/Y H:i') . '<br>
+                                                <strong>Transportista:</strong> ' . Auth::user()->name . '<br>
+                                                <strong>Motivo:</strong> ' . $data['comments'] . '
                                             </p>
                                         </div>
 
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles de la Solicitud</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Material:</strong> '.$record->material_description.'<br>
-                                                <strong>Origen:</strong> '.MaterialRequestTransport::LOCATIONS[$record->pickup_location].' - '.$record->pickup_address.'<br>
-                                                <strong>Destino:</strong> '.MaterialRequestTransport::LOCATIONS[$record->delivery_location].' - '.$record->delivery_address.'
+                                                <strong>Material:</strong> ' . $record->material_description . '<br>
+                                                <strong>Origen:</strong> ' . MaterialRequestTransport::LOCATIONS[$record->pickup_location] . ' - ' . $record->pickup_address . '<br>
+                                                <strong>Destino:</strong> ' . MaterialRequestTransport::LOCATIONS[$record->delivery_location] . ' - ' . $record->delivery_address . '
                                             </p>
                                         </div>
                                     </div>
@@ -503,9 +505,9 @@ class TransportRequestResource extends Resource
                                 </div>
                                 ',
                             ];
-                            Mail::send('emails.test', ['data' => $details], function($message) use ($usuario, $details, $record) {
+                            Mail::send('emails.test', ['data' => $details], function ($message) use ($usuario, $details, $record) {
                                 $message->to($usuario->email)
-                                        ->subject("Solicitud #{$record->id} - Reprogramada");
+                                    ->subject("Solicitud #{$record->id} - Reprogramada");
                             });
                         }
 
@@ -516,15 +518,15 @@ class TransportRequestResource extends Resource
                                 'title' => 'Solicitud de Material Reprogramada',
                                 'content' => '
                                 <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
-                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #'.$record->id.' Reprogramada</h2>
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #' . $record->id . ' Reprogramada</h2>
 
                                     <div style="background-color: white; padding: 20px; border-radius: 8px;">
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">🗓️ Detalles de Reprogramación</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
-                                                <strong>Nueva Fecha:</strong> '.\Carbon\Carbon::parse($data['new_date'])->format('d/m/Y H:i').'<br>
-                                                <strong>Motivo:</strong> '.$data['comments'].'
+                                                <strong>Transportista:</strong> ' . Auth::user()->name . '<br>
+                                                <strong>Nueva Fecha:</strong> ' . \Carbon\Carbon::parse($data['new_date'])->format('d/m/Y H:i') . '<br>
+                                                <strong>Motivo:</strong> ' . $data['comments'] . '
                                             </p>
                                         </div>
                                     </div>
@@ -535,24 +537,53 @@ class TransportRequestResource extends Resource
                                 </div>
                                 ',
                             ];
-                            Mail::send('emails.test', ['data' => $details], function($message) use ($admin, $details, $record) {
+                            Mail::send('emails.test', ['data' => $details], function ($message) use ($admin, $details, $record) {
                                 $message->to($admin->email)
-                                        ->subject("Solicitud #{$record->id} - Reprogramada");
+                                    ->subject("Solicitud #{$record->id} - Reprogramada");
                             });
                         }
                     }),
 
-                Action::make('complete')
+                Action::make('complete_service')
                     ->label('Finalizar Servicio')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->requiresConfirmation()
-                    ->visible(fn ($record) =>
+                    ->form([
+                        Textarea::make('completion_comments')
+                            ->label('Observaciones de Finalización')
+                            ->required()
+                            ->maxLength(1000)
+                            ->placeholder('Describa detalles de la finalización del servicio')
+                            ->helperText('Proporcione información relevante sobre cómo se completó el servicio')
+                            ->rows(4),
+
+                        FileUpload::make('evidence_image')
+                            ->label('Foto de Evidencia (Opcional)')
+                            ->image()
+                            ->disk('public')
+                            ->directory('completion-evidence')
+                            ->maxSize(5120)
+                            ->acceptedFileTypes(['image/jpeg', 'image/png'])
+                            ->helperText('Suba una foto que evidencie la finalización del servicio (máx. 5MB)')
+                    ])
+                    ->visible(
+                        fn($record) =>
                         $record->current_status === MaterialRequestTransport::STATUS_ACCEPTED &&
                         $record->currentTransporter?->transporter_id === Auth::id()
                     )
-                    ->action(function (MaterialRequestTransport $record) {
-                        $record->update(['current_status' => MaterialRequestTransport::STATUS_COMPLETED]);
+                    ->action(function (MaterialRequestTransport $record, array $data) {
+                        // Log para debugging
+                        \Log::info('Finalizando servicio', [
+                            'request_id' => $record->id,
+                            'comments' => $data['completion_comments'] ?? 'sin comentarios',
+                            'has_evidence' => isset($data['evidence_image'])
+                        ]);
+
+                        $record->update([
+                            'current_status' => MaterialRequestTransport::STATUS_COMPLETED,
+                            'comments' => $data['completion_comments'],
+                            'evidence_image' => $data['evidence_image'] ?? null
+                        ]);
 
                         // Enviar correo al usuario
                         $usuario = $record->requester;
@@ -561,7 +592,7 @@ class TransportRequestResource extends Resource
                                 'title' => 'Solicitud de Material Completada',
                                 'content' => '
                                 <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
-                                    <h2 style="color: #2d3748; margin-bottom: 20px;">✅ Solicitud #'.$record->id.' Completada</h2>
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">✅ Solicitud #' . $record->id . ' Completada</h2>
 
                                     <p style="color: #4a5568; margin-bottom: 20px;">
                                         Su solicitud ha sido completada exitosamente.
@@ -571,17 +602,24 @@ class TransportRequestResource extends Resource
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">🚚 Datos del Servicio</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
-                                                <strong>Fecha de Finalización:</strong> '.now()->format('d/m/Y H:i').'
+                                                <strong>Transportista:</strong> ' . Auth::user()->name . '<br>
+                                                <strong>Fecha de Finalización:</strong> ' . now()->format('d/m/Y H:i') . '
+                                            </p>
+                                        </div>
+
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">📝 Observaciones de Finalización</h3>
+                                            <p style="margin-left: 20px; color: #4a5568; background-color: #f0fdf4; padding: 10px; border-radius: 5px;">
+                                                ' . $data['completion_comments'] . '
                                             </p>
                                         </div>
 
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles del Envío</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Material:</strong> '.$record->material_description.'<br>
-                                                <strong>Origen:</strong> '.MaterialRequestTransport::LOCATIONS[$record->pickup_location].' - '.$record->pickup_address.'<br>
-                                                <strong>Destino:</strong> '.MaterialRequestTransport::LOCATIONS[$record->delivery_location].' - '.$record->delivery_address.'
+                                                <strong>Material:</strong> ' . $record->material_description . '<br>
+                                                <strong>Origen:</strong> ' . MaterialRequestTransport::LOCATIONS[$record->pickup_location] . ' - ' . $record->pickup_address . '<br>
+                                                <strong>Destino:</strong> ' . MaterialRequestTransport::LOCATIONS[$record->delivery_location] . ' - ' . $record->delivery_address . '
                                             </p>
                                         </div>
                                     </div>
@@ -592,9 +630,9 @@ class TransportRequestResource extends Resource
                                 </div>
                                 ',
                             ];
-                            Mail::send('emails.test', ['data' => $details], function($message) use ($usuario, $details, $record) {
+                            Mail::send('emails.test', ['data' => $details], function ($message) use ($usuario, $details, $record) {
                                 $message->to($usuario->email)
-                                        ->subject("Solicitud #{$record->id} - Completada");
+                                    ->subject("Solicitud #{$record->id} - Completada");
                             });
                         }
 
@@ -605,15 +643,22 @@ class TransportRequestResource extends Resource
                                 'title' => 'Solicitud de Material Finalizada',
                                 'content' => '
                                 <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
-                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #'.$record->id.' Completada</h2>
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #' . $record->id . ' Completada</h2>
 
                                     <div style="background-color: white; padding: 20px; border-radius: 8px;">
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">✅ Detalles de Finalización</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
-                                                <strong>Fecha de Finalización:</strong> '.now()->format('d/m/Y H:i').'<br>
+                                                <strong>Transportista:</strong> ' . Auth::user()->name . '<br>
+                                                <strong>Fecha de Finalización:</strong> ' . now()->format('d/m/Y H:i') . '<br>
                                                 <strong>Estado:</strong> Completado
+                                            </p>
+                                        </div>
+
+                                        <div style="margin-top: 20px;">
+                                            <h3 style="color: #2d3748; margin-bottom: 10px;">📝 Observaciones de Finalización</h3>
+                                            <p style="margin-left: 20px; color: #4a5568; background-color: #f0fdf4; padding: 10px; border-radius: 5px;">
+                                                ' . $data['completion_comments'] . '
                                             </p>
                                         </div>
                                     </div>
@@ -624,9 +669,9 @@ class TransportRequestResource extends Resource
                                 </div>
                                 ',
                             ];
-                            Mail::send('emails.test', ['data' => $details], function($message) use ($admin, $details, $record) {
+                            Mail::send('emails.test', ['data' => $details], function ($message) use ($admin, $details, $record) {
                                 $message->to($admin->email)
-                                        ->subject("Solicitud #{$record->id} - Completada");
+                                    ->subject("Solicitud #{$record->id} - Completada");
                             });
                         }
                     }),
@@ -653,7 +698,8 @@ class TransportRequestResource extends Resource
                             ->acceptedFileTypes(['image/jpeg', 'image/png'])
                             ->helperText('Suba una foto que evidencie la razón por la que no se pudo realizar el servicio (máx. 5MB)')
                     ])
-                    ->visible(fn ($record) =>
+                    ->visible(
+                        fn($record) =>
                         $record->current_status === MaterialRequestTransport::STATUS_ACCEPTED &&
                         $record->currentTransporter?->transporter_id === Auth::id()
                     )
@@ -671,7 +717,7 @@ class TransportRequestResource extends Resource
                                 'title' => 'Solicitud de Material No Realizada',
                                 'content' => '
                                 <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
-                                    <h2 style="color: #2d3748; margin-bottom: 20px;">❌ Solicitud #'.$record->id.' No Realizada</h2>
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">❌ Solicitud #' . $record->id . ' No Realizada</h2>
 
                                     <p style="color: #4a5568; margin-bottom: 20px;">
                                         Lamentamos informarle que su solicitud no pudo ser realizada.
@@ -681,17 +727,17 @@ class TransportRequestResource extends Resource
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">⚠️ Motivo</h3>
                                             <p style="margin-left: 20px; color: #4a5568; background-color: #fff5f5; padding: 10px; border-radius: 5px;">
-                                                '.$data['failure_reason'].'
+                                                ' . $data['failure_reason'] . '
                                             </p>
                                         </div>
 
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">📦 Detalles de la Solicitud</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
-                                                <strong>Material:</strong> '.$record->material_description.'<br>
-                                                <strong>Origen:</strong> '.MaterialRequestTransport::LOCATIONS[$record->pickup_location].' - '.$record->pickup_address.'<br>
-                                                <strong>Destino:</strong> '.MaterialRequestTransport::LOCATIONS[$record->delivery_location].' - '.$record->delivery_address.'
+                                                <strong>Transportista:</strong> ' . Auth::user()->name . '<br>
+                                                <strong>Material:</strong> ' . $record->material_description . '<br>
+                                                <strong>Origen:</strong> ' . MaterialRequestTransport::LOCATIONS[$record->pickup_location] . ' - ' . $record->pickup_address . '<br>
+                                                <strong>Destino:</strong> ' . MaterialRequestTransport::LOCATIONS[$record->delivery_location] . ' - ' . $record->delivery_address . '
                                             </p>
                                         </div>
                                     </div>
@@ -702,9 +748,9 @@ class TransportRequestResource extends Resource
                                 </div>
                                 ',
                             ];
-                            Mail::send('emails.test', ['data' => $details], function($message) use ($usuario, $details, $record) {
+                            Mail::send('emails.test', ['data' => $details], function ($message) use ($usuario, $details, $record) {
                                 $message->to($usuario->email)
-                                        ->subject("Solicitud #{$record->id} - No Realizada");
+                                    ->subject("Solicitud #{$record->id} - No Realizada");
                             });
                         }
 
@@ -715,15 +761,15 @@ class TransportRequestResource extends Resource
                                 'title' => 'Solicitud de Material No Realizada',
                                 'content' => '
                                 <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
-                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #'.$record->id.' No Realizada</h2>
+                                    <h2 style="color: #2d3748; margin-bottom: 20px;">👥 Supervisión - Solicitud #' . $record->id . ' No Realizada</h2>
 
                                     <div style="background-color: white; padding: 20px; border-radius: 8px;">
                                         <div style="margin-top: 20px;">
                                             <h3 style="color: #2d3748; margin-bottom: 10px;">❌ Detalles del Fallo</h3>
                                             <p style="margin-left: 20px; color: #4a5568;">
-                                                <strong>Transportista:</strong> '.Auth::user()->name.'<br>
-                                                <strong>Fecha:</strong> '.now()->format('d/m/Y H:i').'<br>
-                                                <strong>Motivo:</strong> '.$data['failure_reason'].'
+                                                <strong>Transportista:</strong> ' . Auth::user()->name . '<br>
+                                                <strong>Fecha:</strong> ' . now()->format('d/m/Y H:i') . '<br>
+                                                <strong>Motivo:</strong> ' . $data['failure_reason'] . '
                                             </p>
                                         </div>
                                     </div>
@@ -734,16 +780,17 @@ class TransportRequestResource extends Resource
                                 </div>
                                 ',
                             ];
-                            Mail::send('emails.test', ['data' => $details], function($message) use ($admin, $details, $record) {
+                            Mail::send('emails.test', ['data' => $details], function ($message) use ($admin, $details, $record) {
                                 $message->to($admin->email)
-                                        ->subject("Solicitud #{$record->id} - No Realizada");
+                                    ->subject("Solicitud #{$record->id} - No Realizada");
                             });
                         }
                     }),
 
                 // Agregar acción de eliminar
                 DeleteAction::make()
-                    ->visible(fn (MaterialRequestTransport $record): bool =>
+                    ->visible(
+                        fn(MaterialRequestTransport $record): bool =>
                         $record->current_status === MaterialRequestTransport::STATUS_PENDING &&
                         $record->requester_id === Auth::id()
                     )
@@ -816,6 +863,6 @@ class TransportRequestResource extends Resource
     public static function canDelete(Model $record): bool
     {
         return $record->current_status === MaterialRequestTransport::STATUS_PENDING &&
-               $record->requester_id === Auth::id();
+            $record->requester_id === Auth::id();
     }
 }

@@ -3,17 +3,19 @@
 namespace App\Exports;
 
 use App\Models\MaterialRequest;
+use App\Models\TransporterWorkLog;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use Carbon\Carbon;
-use Illuminate\Support\Collection;
 
 class TransportRequestsExport implements FromCollection, WithHeadings, WithMapping, WithStyles
 {
     protected $records;
+
+    protected array $workLogCache = [];
 
     public function __construct($records = null)
     {
@@ -30,7 +32,7 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             'requester',
             'materialCategory',
             'origin',
-            'currentTransporter.transporter'
+            'currentTransporter.transporter',
         ])->get();
     }
 
@@ -40,25 +42,27 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             'ID',
             'Fecha de Solicitud',
             'Solicitante',
-            'Categoría',
-            'Área de Origen',
+            'Categoria',
+            'Area de Origen',
             'Estado',
             'Transportista',
-            'Fecha de Asignación',
-            'Dirección de Recogida',
-            'Ubicación de Recogida',
+            'Fecha de Asignacion',
+            'Inicio Jornada',
+            'Fin Jornada',
+            'Direccion de Recogida',
+            'Ubicacion de Recogida',
             'Contacto Recogida',
-            'Teléfono Recogida',
-            'Dirección de Entrega',
-            'Ubicación de Entrega',
+            'Telefono Recogida',
+            'Direccion de Entrega',
+            'Ubicacion de Entrega',
             'Contacto Entrega',
-            'Teléfono Entrega',
-            'Descripción del Material',
+            'Telefono Entrega',
+            'Descripcion del Material',
             'Comentarios',
-            'Motivo de Reprogramación',
-            'Nueva Fecha (Reprogramación)',
-            'Fecha de Finalización',
-            'Tiempo de Servicio (Horas)'
+            'Motivo de Reprogramacion',
+            'Nueva Fecha (Reprogramacion)',
+            'Fecha de Finalizacion',
+            'Tiempo de Servicio (Horas)',
         ];
     }
 
@@ -66,9 +70,23 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
     {
         $serviceTime = null;
         $completionDateFormatted = 'N/A';
+        $assignmentDateFormatted = 'N/A';
+        $workdayStart = 'Sin cierre';
+        $workdayEnd = 'Sin cierre';
 
         if ($request->current_status === MaterialRequest::STATUS_COMPLETED) {
             $completionDateFormatted = Carbon::parse($request->updated_at)->format('d/m/Y H:i');
+        }
+
+        if ($request->currentTransporter) {
+            $assignmentDateFormatted = Carbon::parse($request->currentTransporter->assignment_date)->format('d/m/Y H:i');
+
+            $workLog = $this->resolveWorkLogForRequest($request);
+
+            if ($workLog) {
+                $workdayStart = Carbon::parse($workLog->started_at)->format('d/m/Y H:i');
+                $workdayEnd = Carbon::parse($workLog->ended_at)->format('d/m/Y H:i');
+            }
         }
 
         if ($request->current_status === MaterialRequest::STATUS_COMPLETED && $request->currentTransporter) {
@@ -93,7 +111,9 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             $request->origin->name ?? 'N/A',
             MaterialRequest::getStatuses()[$request->current_status] ?? $request->current_status,
             $request->currentTransporter->transporter->name ?? 'No asignado',
-            $request->currentTransporter ? Carbon::parse($request->currentTransporter->assignment_date)->format('d/m/Y H:i') : 'N/A',
+            $assignmentDateFormatted,
+            $workdayStart,
+            $workdayEnd,
             $request->pickup_address,
             $pickupLocation,
             $request->pickup_contact,
@@ -107,8 +127,67 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             $request->reschedule_comments ?? 'N/A',
             $request->rescheduled_date ? Carbon::parse($request->rescheduled_date)->format('d/m/Y H:i') : 'N/A',
             $completionDateFormatted,
-            $serviceTime ?? 'N/A'
+            $serviceTime ?? 'N/A',
         ];
+    }
+
+    protected function resolveWorkLog(?int $transporterId, $assignmentDate): ?TransporterWorkLog
+    {
+        if (! $transporterId || ! $assignmentDate) {
+            return null;
+        }
+
+        $workDate = Carbon::parse($assignmentDate)->toDateString();
+        $cacheKey = $transporterId . '|' . $workDate;
+
+        if (! array_key_exists($cacheKey, $this->workLogCache)) {
+            $this->workLogCache[$cacheKey] = TransporterWorkLog::query()
+                ->where('transporter_id', $transporterId)
+                ->whereDate('work_date', $workDate)
+                ->first();
+        }
+
+        return $this->workLogCache[$cacheKey];
+    }
+
+    protected function resolveWorkLogForRequest($request): ?TransporterWorkLog
+    {
+        if (! $request->currentTransporter || ! $request->currentTransporter->transporter_id) {
+            return null;
+        }
+
+        $transporterId = (int) $request->currentTransporter->transporter_id;
+        $candidateDates = [];
+
+        if (
+            in_array($request->current_status, [MaterialRequest::STATUS_COMPLETED, MaterialRequest::STATUS_FAILED], true)
+            && $request->updated_at
+        ) {
+            $candidateDates[] = Carbon::parse($request->updated_at);
+        }
+
+        if ($request->currentTransporter->assignment_date) {
+            $assignmentDate = Carbon::parse($request->currentTransporter->assignment_date);
+            $candidateDates[] = $assignmentDate;
+            $candidateDates[] = $assignmentDate->copy()->addDay();
+        }
+
+        $seenDates = [];
+        foreach ($candidateDates as $date) {
+            $dateKey = $date->toDateString();
+            if (isset($seenDates[$dateKey])) {
+                continue;
+            }
+
+            $seenDates[$dateKey] = true;
+            $workLog = $this->resolveWorkLog($transporterId, $date);
+
+            if ($workLog) {
+                return $workLog;
+            }
+        }
+
+        return null;
     }
 
     public function styles(Worksheet $sheet)

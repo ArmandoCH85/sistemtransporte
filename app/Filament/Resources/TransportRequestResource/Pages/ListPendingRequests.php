@@ -4,6 +4,9 @@ namespace App\Filament\Resources\TransportRequestResource\Pages;
 
 use App\Filament\Resources\TransportRequestResource;
 use App\Models\MaterialRequestTransport;
+use App\Services\TransporterWorkdayService;
+use Carbon\Carbon;
+use Filament\Actions\Action as HeaderAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
@@ -30,6 +33,64 @@ class ListPendingRequests extends ListRecords
     use ExposesTableToWidgets;
 
     protected static string $resource = TransportRequestResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            HeaderAction::make('closeWorkday')
+                ->label('Finalizar mi jornada')
+                ->icon('heroicon-o-briefcase')
+                ->color('success')
+                ->visible(fn (): bool => Auth::check() && Auth::user()->hasRole('Transportista'))
+                ->requiresConfirmation()
+                ->modalHeading('Finalizar jornada laboral')
+                ->modalDescription('Se registrará la salida de hoy. Este cierre solo puede hacerse una vez por día.')
+                ->modalSubmitActionLabel('Confirmar cierre')
+                ->action(function () {
+                    $user = Auth::user();
+
+                    if (! $user || ! $user->hasRole('Transportista')) {
+                        Notification::make()
+                            ->title('Acción no permitida')
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
+                    $result = app(TransporterWorkdayService::class)->closeForToday($user);
+                    $log = $result['log'];
+
+                    if ($result['created']) {
+                        Notification::make()
+                            ->title('Jornada cerrada con éxito')
+                            ->body(
+                                'Inicio: '
+                                . Carbon::parse($log->started_at)->format('d/m/Y H:i')
+                                . ' | Salida: '
+                                . Carbon::parse($log->ended_at)->format('d/m/Y H:i')
+                            )
+                            ->success()
+                            ->persistent()
+                            ->send();
+
+                        return;
+                    }
+
+                    Notification::make()
+                        ->title('Ya registraste tu salida hoy')
+                        ->body(
+                            'Tu jornada del '
+                            . Carbon::parse($log->work_date)->format('d/m/Y')
+                            . ' ya fue cerrada a las '
+                            . Carbon::parse($log->ended_at)->format('H:i')
+                        )
+                        ->warning()
+                        ->persistent()
+                        ->send();
+                }),
+        ];
+    }
 
     public function getTabs(): array
     {
@@ -364,3 +425,5 @@ class ListPendingRequests extends ListRecords
         $this->dispatch('refresh');
     }
 }
+
+

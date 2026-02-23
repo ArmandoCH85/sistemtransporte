@@ -166,6 +166,31 @@
                         </div>
                     @endif
                 </div>
+            @elseif($request->current_status === MaterialRequest::STATUS_COMPLETED && $request->comments)
+                {{-- Sección de Observaciones para Servicios Completados --}}
+                <div class="mt-4 space-y-4">
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <h4 class="font-semibold text-green-800 flex items-center gap-2 mb-2">
+                            <x-heroicon-o-check-circle class="w-5 h-5"/>
+                            Observaciones de Finalización
+                        </h4>
+                        <p class="text-green-700 ml-7">{{ $request->comments }}</p>
+                    </div>
+
+                    @if($request->evidence_image)
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <h4 class="font-semibold text-gray-800 flex items-center gap-2 mb-3">
+                                <x-heroicon-o-camera class="w-5 h-5"/>
+                                Evidencia Fotográfica
+                            </h4>
+                            <div class="mt-2">
+                                <img src="{{ Storage::url($request->evidence_image) }}"
+                                     alt="Evidencia de finalización"
+                                     class="rounded-lg max-h-64 mx-auto shadow-lg">
+                            </div>
+                        </div>
+                    @endif
+                </div>
             @elseif($request->currentTransporter->comments && $request->current_status !== MaterialRequest::STATUS_RESCHEDULED)
                 <div class="mt-3 bg-gray-50 p-3 rounded-lg">
                     <p class="flex items-center gap-2">
