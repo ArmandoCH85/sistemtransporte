@@ -59,6 +59,7 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             'Telefono Entrega',
             'Descripcion del Material',
             'Comentarios',
+            'Observacion Transportista',
             'Motivo de Reprogramacion',
             'Nueva Fecha (Reprogramacion)',
             'Fecha de Finalizacion',
@@ -73,6 +74,7 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
         $assignmentDateFormatted = 'N/A';
         $workdayStart = 'Sin cierre';
         $workdayEnd = 'Sin cierre';
+        $transporterObservation = 'Sin observacion';
 
         if ($request->current_status === MaterialRequest::STATUS_COMPLETED) {
             $completionDateFormatted = Carbon::parse($request->updated_at)->format('d/m/Y H:i');
@@ -80,6 +82,9 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
 
         if ($request->currentTransporter) {
             $assignmentDateFormatted = Carbon::parse($request->currentTransporter->assignment_date)->format('d/m/Y H:i');
+            $transporterObservation = filled($request->currentTransporter->comments)
+                ? $request->currentTransporter->comments
+                : 'Sin observacion';
 
             $workLog = $this->resolveWorkLogForRequest($request);
 
@@ -124,6 +129,7 @@ class TransportRequestsExport implements FromCollection, WithHeadings, WithMappi
             $request->delivery_phone,
             $request->material_description,
             $request->comments,
+            $transporterObservation,
             $request->reschedule_comments ?? 'N/A',
             $request->rescheduled_date ? Carbon::parse($request->rescheduled_date)->format('d/m/Y H:i') : 'N/A',
             $completionDateFormatted,

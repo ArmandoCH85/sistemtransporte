@@ -275,14 +275,53 @@ class ListPendingRequests extends ListRecords
                     ->visible(fn (MaterialRequestTransport $record): bool =>
                         $record->current_status === MaterialRequestTransport::STATUS_ACCEPTED
                     )
-                    ->action(function (MaterialRequestTransport $record) {
+                    ->form([
+                        Textarea::make('completion_comments')
+                            ->label('Observación')
+                            ->placeholder('Escriba una observación de finalización (opcional)')
+                            ->maxLength(1000)
+                            ->rows(3),
+
+                        FileUpload::make('completion_image')
+                            ->label('Foto de evidencia (opcional)')
+                            ->helperText('Puede adjuntar una imagen del servicio finalizado')
+                            ->image()
+                            ->disk('public')
+                            ->directory('completion-images')
+                            ->visibility('public')
+                            ->maxSize(5120),
+                    ])
+                    ->action(function (MaterialRequestTransport $record, array $data) {
                         $record->update([
                             'current_status' => MaterialRequestTransport::STATUS_COMPLETED,
                         ]);
 
+                        $transporterRecord = RequestTransporter::where('request_id', $record->id)
+                            ->where('transporter_id', Auth::id())
+                            ->where('assignment_status', 'accepted')
+                            ->latest('assignment_date')
+                            ->first();
+
+                        if ($transporterRecord && filled($data['completion_comments'] ?? null)) {
+                            $transporterRecord->update([
+                                'comments' => $data['completion_comments'],
+                            ]);
+                        }
+
+                        if (!empty($data['completion_image'])) {
+                            DB::table('images')->insert([
+                                'request_id' => $record->id,
+                                'type' => 'delivery',
+                                'image_url' => $data['completion_image'],
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+
                         Notification::make()
                             ->success()
                             ->title('Servicio finalizado correctamente')
+                            ->body('Se guardó la información de finalización del servicio.')
                             ->send();
 
                         $this->refreshList();
@@ -306,6 +345,7 @@ class ListPendingRequests extends ListRecords
                                         $transporterData = RequestTransporter::where('request_id', $record->id)
                                             ->where('transporter_id', Auth::id())
                                             ->where('assignment_status', 'accepted')
+                                            ->latest('assignment_date')
                                             ->first();
                                         return $transporterData ? $transporterData->comments : 'No se especificó motivo';
                                     }),
@@ -385,6 +425,7 @@ class ListPendingRequests extends ListRecords
                         $transporterRecord = RequestTransporter::where('request_id', $record->id)
                             ->where('transporter_id', Auth::id())
                             ->where('assignment_status', 'accepted')
+                            ->latest('assignment_date')
                             ->first();
 
                         if ($transporterRecord) {
@@ -425,5 +466,3 @@ class ListPendingRequests extends ListRecords
         $this->dispatch('refresh');
     }
 }
-
-
