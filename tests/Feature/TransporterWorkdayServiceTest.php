@@ -18,7 +18,7 @@ test('it closes a transportista workday only once per day', function () {
     expect($first['created'])->toBeTrue();
     expect(TransporterWorkLog::count())->toBe(1);
     expect($first['log']->work_date->toDateString())->toBe('2026-02-23');
-    expect($first['log']->started_at->format('H:i:s'))->toBe('08:00:00');
+    expect($first['log']->started_at->format('H:i:s'))->toBe('07:00:00');
     expect($first['log']->ended_at->format('H:i:s'))->toBe('18:17:00');
 
     $second = $service->closeForToday($transporter, $now->copy()->addHour());

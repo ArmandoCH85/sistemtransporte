@@ -9,7 +9,7 @@ use Carbon\Carbon;
 class TransporterWorkdayService
 {
     /**
-     * Close a transportista day once, keeping a fixed 08:00 start.
+     * Close a transportista day once, keeping a fixed 07:00 start.
      *
      * @return array{created: bool, log: TransporterWorkLog}
      */
@@ -20,7 +20,7 @@ class TransporterWorkdayService
             : Carbon::now(config('app.timezone'));
 
         $workDate = $now->toDateString();
-        $startedAt = Carbon::parse("{$workDate} 08:00:00", config('app.timezone'));
+        $startedAt = Carbon::parse("{$workDate} 07:00:00", config('app.timezone'));
 
         $log = TransporterWorkLog::firstOrCreate(
             [
