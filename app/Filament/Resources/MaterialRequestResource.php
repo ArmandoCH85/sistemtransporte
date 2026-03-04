@@ -106,7 +106,12 @@ class MaterialRequestResource extends Resource
                     ->description('Detalles del punto de recogida')
                     ->schema([
                         Select::make('pickup_location')
-                            ->options(MaterialRequest::getLocations())
+                            ->options(fn (): array => collect(MaterialRequest::getLocations())
+                                ->except([
+                                    'torre_hospitalaria_385',
+                                    'torre_ambulatoria_421',
+                                ])
+                                ->all())
                             ->required()
                             ->label('Ubicación')
                             ->placeholder('Seleccione la ubicación'),
@@ -138,7 +143,12 @@ class MaterialRequestResource extends Resource
                     ->description('Detalles del punto de entrega')
                     ->schema([
                         Select::make('delivery_location')
-                            ->options(MaterialRequest::getLocations())
+                            ->options(fn (): array => collect(MaterialRequest::getLocations())
+                                ->except([
+                                    'torre_hospitalaria_385',
+                                    'torre_ambulatoria_421',
+                                ])
+                                ->all())
                             ->required()
                             ->label('Ubicación')
                             ->placeholder('Seleccione la ubicación'),

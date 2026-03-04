@@ -31,4 +31,12 @@ it('uses referencia labels for pickup and delivery address fields', function ():
 
     expect($fields['pickup_address']->getLabel())->toBe('Referencia');
     expect($fields['delivery_address']->getLabel())->toBe('Referencia');
+
+    $pickupOptions = $fields['pickup_location']->getOptions();
+    $deliveryOptions = $fields['delivery_location']->getOptions();
+
+    expect($pickupOptions)->not->toHaveKey('torre_hospitalaria_385');
+    expect($pickupOptions)->not->toHaveKey('torre_ambulatoria_421');
+    expect($deliveryOptions)->not->toHaveKey('torre_hospitalaria_385');
+    expect($deliveryOptions)->not->toHaveKey('torre_ambulatoria_421');
 });
