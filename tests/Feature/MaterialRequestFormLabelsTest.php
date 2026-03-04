@@ -35,8 +35,17 @@ it('uses referencia labels for pickup and delivery address fields', function ():
     $pickupOptions = $fields['pickup_location']->getOptions();
     $deliveryOptions = $fields['delivery_location']->getOptions();
 
-    expect($pickupOptions)->not->toHaveKey('torre_hospitalaria_385');
-    expect($pickupOptions)->not->toHaveKey('torre_ambulatoria_421');
-    expect($deliveryOptions)->not->toHaveKey('torre_hospitalaria_385');
-    expect($deliveryOptions)->not->toHaveKey('torre_ambulatoria_421');
+    $expectedOptions = [
+        'surco' => 'Surco',
+        'san_isidro' => 'San Isidro',
+        'san_borja_hospitalaria' => 'San Borja Hospitalaria',
+        'lima_ambulatoria' => 'Lima Ambulatoria',
+        'lima_hospitalaria' => 'Lima Hospitalaria',
+        'la_molina' => 'La Molina',
+        'san_borja_ambulatoria' => 'San Borja Ambulatoria',
+        'alto_caral' => 'Alto Caral',
+    ];
+
+    expect($pickupOptions)->toBe($expectedOptions);
+    expect($deliveryOptions)->toBe($expectedOptions);
 });
