@@ -106,16 +106,7 @@ class MaterialRequestResource extends Resource
                     ->description('Detalles del punto de recogida')
                     ->schema([
                         Select::make('pickup_location')
-                            ->options([
-                                'surco' => 'Surco',
-                                'san_isidro' => 'San Isidro',
-                                'san_borja_hospitalaria' => 'San Borja Hospitalaria',
-                                'lima_ambulatoria' => 'Lima Ambulatoria',
-                                'lima_hospitalaria' => 'Lima Hospitalaria',
-                                'la_molina' => 'La Molina',
-                                'san_borja_ambulatoria' => 'San Borja Ambulatoria',
-                                'alto_caral' => 'Alto Caral',
-                            ])
+                            ->options(MaterialRequest::getLocations())
                             ->required()
                             ->label('Ubicación')
                             ->placeholder('Seleccione la ubicación'),
@@ -124,7 +115,7 @@ class MaterialRequestResource extends Resource
                             ->required()
                             ->maxLength(1000)
                             ->rows(3)
-                            ->label('Dirección')
+                            ->label('Referencia')
                             ->helperText('Incluye referencias para facilitar la ubicación'),
 
                         TextInput::make('pickup_contact')
@@ -147,16 +138,7 @@ class MaterialRequestResource extends Resource
                     ->description('Detalles del punto de entrega')
                     ->schema([
                         Select::make('delivery_location')
-                            ->options([
-                                'surco' => 'Surco',
-                                'san_isidro' => 'San Isidro',
-                                'san_borja_hospitalaria' => 'San Borja Hospitalaria',
-                                'lima_ambulatoria' => 'Lima Ambulatoria',
-                                'lima_hospitalaria' => 'Lima Hospitalaria',
-                                'la_molina' => 'La Molina',
-                                'san_borja_ambulatoria' => 'San Borja Ambulatoria',
-                                'alto_caral' => 'Alto Caral',
-                            ])
+                            ->options(MaterialRequest::getLocations())
                             ->required()
                             ->label('Ubicación')
                             ->placeholder('Seleccione la ubicación'),
@@ -165,7 +147,7 @@ class MaterialRequestResource extends Resource
                             ->required()
                             ->maxLength(1000)
                             ->rows(3)
-                            ->label('Dirección')
+                            ->label('Referencia')
                             ->helperText('Incluye referencias para facilitar la ubicación'),
 
                         TextInput::make('delivery_contact')
@@ -334,7 +316,7 @@ class MaterialRequestResource extends Resource
                                                     ->weight('medium'),
 
                                                 TextEntry::make('pickup_address')
-                                                    ->label('Dirección')
+                                                    ->label('Referencia')
                                                     ->columnSpanFull(),
 
                                                 InfolistGrid::make(2)
@@ -360,7 +342,7 @@ class MaterialRequestResource extends Resource
                                                     ->weight('medium'),
 
                                                 TextEntry::make('delivery_address')
-                                                    ->label('Dirección')
+                                                    ->label('Referencia')
                                                     ->columnSpanFull(),
 
                                                 InfolistGrid::make(2)
