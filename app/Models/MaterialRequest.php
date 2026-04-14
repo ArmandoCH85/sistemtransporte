@@ -28,6 +28,7 @@ class MaterialRequest extends Model
         'alto_caral' => 'Alto Caral - Av. Deonisio Derteano 150',
         'lima_ambulatoria' => 'Ambulatorio Lima - Av Garcilazo 1420',
         'lima_hospitalaria' => 'Hospitalario Lima - Av. Washington 1470',
+        'la_molina' => 'Sede La Molina',
         'san_borja_ambulatoria' => 'Ambulatorio SSB - Av. Guardia civil 421',
         'san_borja_hospitalaria' => 'Hospitalario SSB - Av. Guardia Civil 43',
         'plata_malpartida_ssb' => 'Plata Malpartida SSB - Av. Guardia civil 373',
