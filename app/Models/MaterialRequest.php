@@ -35,6 +35,7 @@ class MaterialRequest extends Model
         'playa_malpartida_343' => 'Playa malpartida 343',
         'torre_hospitalaria_385' => 'Torre Hospitalaria 385',
         'torre_ambulatoria_421' => 'Torre Ambulatoria 421',
+        'playa_malpartida_san_borja' => 'Playa Malpartida San Borja',
     ];
 
     protected $fillable = [

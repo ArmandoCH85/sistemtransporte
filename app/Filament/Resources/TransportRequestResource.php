@@ -139,6 +139,7 @@ class TransportRequestResource extends Resource
                                 'la_molina' => 'La Molina',
                                 'alto_caral' => 'Alto Caral',
                                 'san_borja_ambulatoria' => 'San Borja Ambulatoria',
+                                'playa_malpartida_san_borja' => 'Playa Malpartida San Borja',
                             ])
                             ->required()
                             ->label('Ubicación')
@@ -183,6 +184,7 @@ class TransportRequestResource extends Resource
                                 'la_molina' => 'La Molina',
                                 'alto_caral' => 'Alto Caral',
                                 'san_borja_ambulatoria' => 'San Borja Ambulatoria',
+                                'playa_malpartida_san_borja' => 'Playa Malpartida San Borja',
                             ])
                             ->required()
                             ->label('Ubicación')

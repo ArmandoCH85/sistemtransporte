@@ -115,6 +115,7 @@ class MaterialRequestResource extends Resource
                                 'la_molina' => 'La Molina',
                                 'san_borja_ambulatoria' => 'San Borja Ambulatoria',
                                 'alto_caral' => 'Alto Caral',
+                                'playa_malpartida_san_borja' => 'Playa Malpartida San Borja',
                             ])
                             ->required()
                             ->label('Ubicación')
@@ -156,6 +157,7 @@ class MaterialRequestResource extends Resource
                                 'la_molina' => 'La Molina',
                                 'san_borja_ambulatoria' => 'San Borja Ambulatoria',
                                 'alto_caral' => 'Alto Caral',
+                                'playa_malpartida_san_borja' => 'Playa Malpartida San Borja',
                             ])
                             ->required()
                             ->label('Ubicación')
