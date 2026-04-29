@@ -107,15 +107,15 @@ class MaterialRequestResource extends Resource
                     ->schema([
                         Select::make('pickup_location')
                             ->options([
-                                'surco' => 'Surco',
-                                'san_isidro' => 'San Isidro',
-                                'san_borja_hospitalaria' => 'San Borja Hospitalaria',
+                                'alto_caral' => 'Alto Caral',
+                                'la_molina' => 'La Molina',
                                 'lima_ambulatoria' => 'Lima Ambulatoria',
                                 'lima_hospitalaria' => 'Lima Hospitalaria',
-                                'la_molina' => 'La Molina',
-                                'san_borja_ambulatoria' => 'San Borja Ambulatoria',
-                                'alto_caral' => 'Alto Caral',
                                 'playa_malpartida_san_borja' => 'Playa Malpartida San Borja',
+                                'san_borja_ambulatoria' => 'San Borja Ambulatoria',
+                                'san_borja_hospitalaria' => 'San Borja Hospitalaria',
+                                'san_isidro' => 'San Isidro',
+                                'surco' => 'Surco',
                             ])
                             ->required()
                             ->label('Ubicación')
@@ -149,15 +149,15 @@ class MaterialRequestResource extends Resource
                     ->schema([
                         Select::make('delivery_location')
                             ->options([
-                                'surco' => 'Surco',
-                                'san_isidro' => 'San Isidro',
-                                'san_borja_hospitalaria' => 'San Borja Hospitalaria',
+                                'alto_caral' => 'Alto Caral',
+                                'la_molina' => 'La Molina',
                                 'lima_ambulatoria' => 'Lima Ambulatoria',
                                 'lima_hospitalaria' => 'Lima Hospitalaria',
-                                'la_molina' => 'La Molina',
-                                'san_borja_ambulatoria' => 'San Borja Ambulatoria',
-                                'alto_caral' => 'Alto Caral',
                                 'playa_malpartida_san_borja' => 'Playa Malpartida San Borja',
+                                'san_borja_ambulatoria' => 'San Borja Ambulatoria',
+                                'san_borja_hospitalaria' => 'San Borja Hospitalaria',
+                                'san_isidro' => 'San Isidro',
+                                'surco' => 'Surco',
                             ])
                             ->required()
                             ->label('Ubicación')
